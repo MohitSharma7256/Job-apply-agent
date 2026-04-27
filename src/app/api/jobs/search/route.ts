@@ -51,8 +51,20 @@ export async function POST(request: NextRequest) {
       console.log('[Cache] Returning cached results');
       jobs = cachedJobs;
     } else {
-      jobs = await jobSearchService.searchAllPlatforms(searchParams);
-      jobCacheService.set(cacheKey, jobs);
+      // Try platform scrapers first, fall back to AI if they fail
+      const scraperJobs = await jobSearchService.searchAllPlatforms(searchParams);
+      
+      if (scraperJobs.length > 0) {
+        jobs = scraperJobs;
+      } else {
+        // AI-powered search as guaranteed fallback
+        console.log('[Search] Scrapers blocked, using AI-powered job search...');
+        jobs = await aiService.searchJobsWithAI(searchParams);
+      }
+      
+      if (jobs.length > 0) {
+        jobCacheService.set(cacheKey, jobs);
+      }
     }
 
     let enrichedJobs = jobs;

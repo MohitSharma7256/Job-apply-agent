@@ -8,28 +8,35 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 
 export class SupabaseService {
   async saveJobs(jobs: Job[]) {
-    const { data, error } = await supabase
-      .from('jobs')
-      .upsert(
-        jobs.map(job => ({
-          id: job.id,
-          title: job.title,
-          company: job.company,
-          location: job.location,
-          salary: job.salary,
-          description: job.description,
-          platform: job.platform,
-          url: job.url,
-          posted_date: job.postedDate,
-          match_score: job.matchScore,
-          skills: job.skills,
-          ai_analysis: job.aiAnalysis,
-        })),
-        { onConflict: 'id' }
-      );
-    
-    if (error) console.error('Error saving jobs to Supabase:', error);
-    return data;
+    if (!supabaseUrl || !supabaseKey) return null; // Skip if not configured
+    try {
+      const { data, error } = await supabase
+        .from('jobs')
+        .upsert(
+          jobs.map(job => ({
+            id: job.id,
+            title: job.title,
+            company: job.company,
+            location: job.location,
+            salary: job.salary,
+            description: job.description,
+            platform: job.platform,
+            url: job.url,
+            posted_date: job.postedDate,
+            match_score: job.matchScore,
+            skills: job.skills,
+            ai_analysis: job.aiAnalysis,
+          })),
+          { onConflict: 'id' }
+        );
+      if (error && error.code !== 'PGRST205') {
+        console.error('Error saving jobs to Supabase:', error);
+      }
+      return data;
+    } catch (e) {
+      // Silently fail - app works without Supabase
+      return null;
+    }
   }
 
   async getJobs() {
