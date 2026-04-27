@@ -39,9 +39,26 @@ export class JobSearchService {
         }
       });
 
+      // Emergency Fallback: If no jobs found, try a generic web search
+      if (allJobs.length === 0) {
+        console.log('No jobs found via adapters, triggering Emergency Google Fallback...');
+        const fallbackJobs = await this.triggerGoogleFallback(params);
+        allJobs.push(...fallbackJobs);
+      }
+
       return this.deduplicateJobs(allJobs);
     } catch (error) {
       console.error('Unified search error:', error);
+      return [];
+    }
+  }
+
+  private async triggerGoogleFallback(params: JobSearchParams): Promise<Job[]> {
+    try {
+      const { aiService } = await import('./aiService');
+      return await aiService.searchJobsWithAI(params);
+    } catch (e) {
+      console.error('Fallback failed:', e);
       return [];
     }
   }

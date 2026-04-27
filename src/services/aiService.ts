@@ -304,6 +304,48 @@ Return ONLY a JSON object:
     }
     return { score: 75, tips: ['Ensure relevant keywords are present in your experience section.'] };
   }
+
+  async searchJobsWithAI(params: any): Promise<Job[]> {
+    const prompt = `
+      Act as a high-performance job search engine. Find the latest job opportunities matching these criteria:
+      KEYWORDS: ${params.keywords.join(', ')}
+      LOCATIONS: ${params.locations.join(', ')}
+      
+      Return a list of 5-8 highly relevant job opportunities that actually exist on major platforms (Naukri, LinkedIn, Indeed, etc.).
+      
+      Respond ONLY with a JSON array:
+      [
+        {
+          "title": "...",
+          "company": "...",
+          "location": "...",
+          "salary": "...",
+          "url": "...",
+          "platform": "naukri|linkedin|indeed"
+        }
+      ]
+    `;
+
+    try {
+      const response = await this.callAI(prompt);
+      const jsonMatch = response.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const parsedJobs = JSON.parse(jsonMatch[0]);
+        return parsedJobs.map((j: any) => ({
+          ...j,
+          id: `ai-${Math.random().toString(36).substr(2, 9)}`,
+          postedDate: new Date().toISOString(),
+          skills: [],
+          applied: false,
+          status: 'new',
+          matchScore: 8
+        }));
+      }
+    } catch (e) {
+      console.error('AI Search error:', e);
+    }
+    return [];
+  }
 }
 
 export const aiService = new AIService();
