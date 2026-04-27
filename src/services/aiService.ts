@@ -15,9 +15,9 @@ export class AIService {
   private model: string;
 
   constructor() {
-    this.apiKey = process.env.GOOGLE_AI_API_KEY || process.env.OPENAI_API_KEY || '';
-    this.model = AI_CONFIG.model;
-    this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai';
+    this.apiKey = process.env.GOOGLE_AI_API_KEY || '';
+    this.model = 'gemini-1.5-pro'; // Using a more stable model name
+    this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
   }
 
   async scoreJobMatch(job: Job, profile: UserProfile): Promise<AIGeneratedContent> {
@@ -155,11 +155,7 @@ Return ONLY a JSON object:
 
     const body = isGoogle
       ? {
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: AI_CONFIG.temperature,
-            maxOutputTokens: AI_CONFIG.maxTokens,
-          },
+          contents: [{ parts: [{ text: prompt }] }]
         }
       : {
           model: 'gpt-4o-mini',
