@@ -8,11 +8,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "login:naukri": "ts-node src/scripts/login.ts naukri",
-    "login:linkedin": "ts-node src/scripts/login.ts linkedin",
-    "login:indeed": "ts-node src/scripts/login.ts indeed",
-    "login:apna": "ts-node src/scripts/login.ts apna",
-    "login:shine": "ts-node src/scripts/login.ts shine"
+    "login:naukri": "node src/scripts/login.js naukri",
+    "login:linkedin": "node src/scripts/login.js linkedin",
+    "login:indeed": "node src/scripts/login.js indeed",
+    "login:apna": "node src/scripts/login.js apna",
+    "login:shine": "node src/scripts/login.js shine"
   },
   "dependencies": {
     "@google/generative-ai": "^0.3.0",
