@@ -15,6 +15,8 @@ export interface Job {
   experienceLevel: 'fresher' | 'mid' | 'senior' | 'lead' | 'any';
   skills: string[];
   matchScore?: number;
+  matchedSkills?: string[];
+  missingSkills?: string[];
   applied: boolean;
   appliedAt?: string;
   status: 'new' | 'matched' | 'applied' | 'rejected' | 'interview' | 'offer';

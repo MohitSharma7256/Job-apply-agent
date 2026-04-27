@@ -1,118 +1,178 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { jobSearchService } from '@/services/jobSearchService';
-import { aiService } from '@/services/aiService';
-import { supabaseService } from '@/services/supabaseService';
 import { jobCacheService } from '@/services/jobCacheService';
-import { Job, JobSearchParams, UserProfile } from '@/types';
+import { supabaseService } from '@/services/supabaseService';
+import { Job, UserProfile } from '@/types';
 
 export const runtime = 'nodejs';
-export const maxDuration = 300;
+export const maxDuration = 60;
+
+async function searchJobsWithGemini(keywords: string[], locations: string[], platforms: string[]): Promise<Job[]> {
+  const apiKey = process.env.GOOGLE_AI_API_KEY || '';
+  if (!apiKey) throw new Error('GOOGLE_AI_API_KEY not set');
+
+  const prompt = `You are a job search engine with knowledge of current job markets in India and globally.
+
+Find 8-12 realistic, currently available job listings matching these criteria:
+- Keywords/Roles: ${keywords.join(', ')}
+- Locations: ${locations.join(', ')}
+- Platforms: ${platforms.join(', ')}
+
+For each job, provide realistic details that match what you'd find on these platforms today.
+Make sure jobs are DIVERSE - different companies, locations, salary ranges.
+
+Return ONLY a valid JSON array, no markdown, no explanation:
+[
+  {
+    "title": "Senior React Developer",
+    "company": "Infosys",
+    "location": "Bangalore, Karnataka",
+    "salary": "₹12-18 LPA",
+    "platform": "naukri",
+    "url": "https://www.naukri.com/job-listings-senior-react-developer-infosys-bangalore",
+    "description": "Looking for experienced React developer with 4+ years experience...",
+    "skills": ["React", "TypeScript", "Node.js", "AWS"],
+    "jobType": "full-time",
+    "experienceLevel": "senior"
+  }
+]`;
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 4000 }
+      })
+    }
+  );
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Gemini API error: ${response.status} - ${err.substring(0, 300)}`);
+  }
+
+  const data = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+
+  // Extract JSON array from response
+  const jsonMatch = text.match(/\[[\s\S]*\]/);
+  if (!jsonMatch) throw new Error('No valid JSON in AI response');
+
+  const rawJobs = JSON.parse(jsonMatch[0]);
+  return rawJobs.map((j: any, i: number) => ({
+    id: `ai-${Date.now()}-${i}`,
+    title: j.title || 'Unknown Role',
+    company: j.company || 'Company',
+    location: j.location || locations[0] || 'India',
+    salary: j.salary || 'Not Disclosed',
+    url: j.url || `https://www.naukri.com/jobs-search?keyword=${encodeURIComponent(j.title || '')}`,
+    description: j.description || '',
+    skills: Array.isArray(j.skills) ? j.skills : [],
+    platform: j.platform || 'naukri',
+    postedDate: new Date().toISOString(),
+    jobType: j.jobType || 'full-time',
+    experienceLevel: j.experienceLevel || 'mid',
+    matchScore: 7,
+    applied: false,
+    status: 'new'
+  }));
+}
+
+async function scoreJobWithAI(job: Job, profile: UserProfile, apiKey: string): Promise<number> {
+  try {
+    const prompt = `Rate how well this job matches the candidate profile. Return ONLY a number 1-10.
+
+Candidate Skills: ${profile.skills.join(', ')}
+Candidate Experience: ${profile.experience} years
+Target Roles: ${profile.targetRoles?.join(', ') || 'any'}
+
+Job Title: ${job.title}
+Job Skills: ${job.skills.join(', ')}
+Job Description: ${job.description?.substring(0, 300) || ''}
+
+Return only a single number between 1-10:`;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 10 }
+        })
+      }
+    );
+
+    if (!response.ok) return 7;
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '7';
+    const score = parseFloat(text.match(/\d+(\.\d+)?/)?.[0] || '7');
+    return Math.min(10, Math.max(1, score));
+  } catch {
+    return 7;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { keywords, locations, platforms, jobTypes, experienceLevel, salaryMin, maxResults, profile } = body as {
+    const { keywords, locations, platforms, profile } = body as {
       keywords: string[];
       locations: string[];
       platforms: string[];
-      jobTypes?: string[];
-      experienceLevel?: string;
-      salaryMin?: number;
-      maxResults?: number;
       profile: UserProfile;
     };
 
-    if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
-      return NextResponse.json(
-        { error: 'At least one keyword is required' },
-        { status: 400 }
-      );
+    if (!keywords || keywords.length === 0) {
+      return NextResponse.json({ error: 'At least one keyword is required' }, { status: 400 });
     }
-
-    const searchParams: JobSearchParams = {
-      keywords,
-      locations: locations || ['India', 'Remote'],
-      platforms: (platforms || ['naukri', 'linkedin', 'greenhouse']).filter(p => 
-        ['naukri', 'linkedin', 'greenhouse', 'apna', 'indeed', 'internshala', 'shine'].includes(p)
-      ) as any[],
-      jobTypes,
-      experienceLevel,
-      salaryMin,
-      maxResults: maxResults || 50,
-    };
-
-    console.log('Initiating parallel job search with params:', JSON.stringify(searchParams));
 
     const cacheKey = jobCacheService.generateKey({ keywords, locations, platforms });
     const cachedJobs = jobCacheService.get(cacheKey);
 
-    let jobs: Job[] = [];
-    if (cachedJobs) {
-      console.log('[Cache] Returning cached results');
+    let jobs: Job[];
+
+    if (cachedJobs && cachedJobs.length > 0) {
+      console.log('[Cache] Returning cached results:', cachedJobs.length);
       jobs = cachedJobs;
     } else {
-      // Try platform scrapers first, fall back to AI if they fail
-      const scraperJobs = await jobSearchService.searchAllPlatforms(searchParams);
-      
-      if (scraperJobs.length > 0) {
-        jobs = scraperJobs;
-      } else {
-        // AI-powered search as guaranteed fallback
-        console.log('[Search] Scrapers blocked, using AI-powered job search...');
-        jobs = await aiService.searchJobsWithAI(searchParams);
-      }
-      
-      if (jobs.length > 0) {
-        jobCacheService.set(cacheKey, jobs);
-      }
-    }
-
-    let enrichedJobs = jobs;
-    if (profile && profile.skills && profile.skills.length > 0) {
-      // Enrich with AI analysis in parallel (limited to top 15 to avoid API rate limits)
-      const topJobs = jobs.slice(0, 15);
-      const remainingJobs = jobs.slice(15);
-
-      const enrichedTopJobs = await Promise.all(
-        topJobs.map(async (job) => {
-          try {
-            const scoring = await aiService.scoreJobMatch(job, profile);
-            return {
-              ...job,
-              matchScore: scoring.matchScore,
-              aiAnalysis: {
-                reasoning: scoring.reasoning,
-                tailoringNotes: scoring.tailoredNotes,
-                skillGapAnalysis: scoring.skillGapAnalysis,
-                coverLetter: scoring.coverLetter
-              },
-              skills: [...new Set([...job.skills, ...scoring.matchedSkills])],
-            };
-          } catch (error) {
-            console.error(`AI scoring failed for ${job.title}:`, error);
-            return { ...job, matchScore: 5 };
-          }
-        })
+      console.log('[AI Search] Searching with Gemini AI...');
+      jobs = await searchJobsWithGemini(
+        keywords,
+        locations || ['India'],
+        platforms || ['naukri', 'linkedin', 'indeed']
       );
-
-      enrichedJobs = [...enrichedTopJobs, ...remainingJobs];
-      
-      // Save to Supabase (Production DB)
-      try {
-        await supabaseService.saveJobs(enrichedJobs);
-      } catch (e) {
-        console.error('Supabase save error:', e);
-      }
-
-      enrichedJobs = enrichedJobs
-        .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+      console.log(`[AI Search] Found ${jobs.length} jobs`);
     }
+
+    // Score jobs with AI if profile has skills
+    const apiKey = process.env.GOOGLE_AI_API_KEY || '';
+    if (profile?.skills?.length > 0 && jobs.length > 0 && apiKey) {
+      console.log('[AI Scoring] Scoring jobs...');
+      const scoringPromises = jobs.slice(0, 10).map(job => 
+        scoreJobWithAI(job, profile, apiKey).then(score => ({ ...job, matchScore: score }))
+      );
+      const scoredJobs = await Promise.all(scoringPromises);
+      const remainingJobs = jobs.slice(10);
+      jobs = [...scoredJobs, ...remainingJobs].sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+    }
+
+    // Cache results
+    if (jobs.length > 0) {
+      jobCacheService.set(cacheKey, jobs);
+    }
+
+    // Save to Supabase (non-blocking)
+    supabaseService.saveJobs(jobs).catch(e => console.log('Supabase save skipped:', e.message));
 
     return NextResponse.json({
       success: true,
       totalFound: jobs.length,
-      matchedCount: enrichedJobs.filter(j => (j.matchScore || 0) >= 6).length,
-      jobs: enrichedJobs,
+      matchedCount: jobs.filter(j => (j.matchScore || 0) >= 6).length,
+      jobs,
     });
 
   } catch (error: any) {

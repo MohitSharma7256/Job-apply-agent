@@ -1,6 +1,16 @@
-import { Job, UserProfile, AIGeneratedContent } from '@/types';
-import { AI_CONFIG } from '@/config/platforms';
-import { coverLetterService } from './coverLetterService';
+import { Job, UserProfile } from '@/types';
+
+interface AIGeneratedContent {
+  matchScore: number;
+  matchedSkills: string[];
+  missingSkills: string[];
+  reasoning: string;
+  tailoringNotes: string;
+  skillGapAnalysis: {
+    critical: string[];
+    suggested: string[];
+  };
+}
 
 export interface ResumeTailoring {
   tailoredContent: string;
@@ -9,155 +19,102 @@ export interface ResumeTailoring {
   summary: string;
 }
 
+const SKILL_KEYWORDS = [
+  'javascript', 'typescript', 'python', 'java', 'react', 'angular', 'vue',
+  'node', 'express', 'django', 'flask', 'spring', 'aws', 'azure', 'gcp',
+  'docker', 'kubernetes', 'sql', 'mongodb', 'postgresql', 'redis',
+  'git', 'linux', 'machine learning', 'data science', 'tensorflow', 'pytorch',
+  'html', 'css', 'sass', 'tailwind', 'next', 'nuxt', 'graphql', 'rest',
+  'c++', 'c#', 'php', 'ruby', 'go', 'rust', 'swift', 'kotlin',
+  'react native', 'flutter', 'ios', 'android', 'firebase',
+  'graphql', 'grpc', 'microservices', 'CI/CD', 'devops',
+  'mern', 'mean', 'lamp', 'wordpress', 'shopify',
+  'figma', 'photoshop', 'sketch', 'adobe', 'ui/ux',
+  'agile', 'scrum', 'jira', 'confluence',
+  'communication', 'leadership', 'problem solving',
+  'teamwork', 'time management', 'analytical',
+  'excel', 'powerpoint', 'word', 'ppt',
+  'seo', 'sem', 'google ads', 'facebook ads', 'analytics',
+  'content writing', 'copywriting', 'blogging',
+  'sales', 'marketing', 'branding', 'social media',
+  'accounting', 'finance', 'tally', 'tax',
+  'hr', 'recruitment', 'payroll', 'training',
+  'data analysis', 'excel macros', 'vba',
+  'power bi', 'tableau', 'looker', 'dashboard',
+];
+
 export class AIService {
   private apiKey: string;
-  private baseUrl: string;
   private model: string;
+  private useAI: boolean = true;
+  private retryCount: number = 0;
+  private maxRetries: number = 2;
 
   constructor() {
-    this.apiKey = process.env.GOOGLE_AI_API_KEY || '';
-    this.model = 'gemini-2.0-flash';
-    this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
+    this.apiKey = process.env.GOOGLE_AI_API_KEY || process.env.OPENAI_API_KEY || '';
+    this.model = process.env.AI_MODEL || 'gemini-2.0-flash';
+    
+    if (!this.apiKey) {
+      console.log('No AI API key found - using keyword-based fallback scoring');
+      this.useAI = false;
+    }
   }
 
   async scoreJobMatch(job: Job, profile: UserProfile): Promise<AIGeneratedContent> {
+    if (!this.useAI) {
+      return this.keywordBasedScoring(job, profile);
+    }
+
+    try {
+      return await this.aiScoringWithFallback(job, profile);
+    } catch (error: any) {
+      console.error('AI scoring failed, using fallback:', error.message);
+      return this.keywordBasedScoring(job, profile);
+    }
+  }
+
+  private async aiScoringWithFallback(job: Job, profile: UserProfile): Promise<AIGeneratedContent> {
     const prompt = this.buildScoringPrompt(job, profile);
-
+    
     try {
       const response = await this.callAI(prompt);
-      const analysis = await this.parseScoringResponse(response, profile);
-      
-      // If match is good, generate a cover letter automatically
-      if (analysis.matchScore >= 6) {
-        analysis.coverLetter = await coverLetterService.generateCoverLetter(job, profile);
+      return this.parseScoringResponse(response, profile);
+    } catch (error: any) {
+      if (error.message.includes('429') || error.message.includes('quota')) {
+        console.log('AI quota exceeded, using keyword fallback');
+        this.retryCount++;
+        if (this.retryCount > this.maxRetries) {
+          this.useAI = false;
+        }
+        return this.keywordBasedScoring(job, profile);
       }
-      
-      return analysis;
-    } catch (error) {
-      console.error('AI scoring error:', error);
-      return this.fallbackScoring(job, profile);
+      throw error;
     }
-  }
-
-  async tailorResume(job: Job, profile: UserProfile, jobDescription: string): Promise<ResumeTailoring> {
-    const prompt = this.buildResumeTailoringPrompt(job, profile, jobDescription);
-
-    try {
-      const response = await this.callAI(prompt);
-      return this.parseResumeResponse(response);
-    } catch (error) {
-      console.error('Resume tailoring error:', error);
-      return this.fallbackResumeTailoring(profile);
-    }
-  }
-
-  async extractJobDescription(url: string, html: string): Promise<string> {
-    const prompt = `
-Extract the complete job description from the following HTML content. Include:
-- Job title
-- Required skills
-- Qualifications
-- Responsibilities
-- Experience requirements
-
-Return only the relevant job description text, no HTML tags.
-
-HTML Content:
-${html.substring(0, 8000)}
-`;
-
-    try {
-      const response = await this.callAI(prompt);
-      return response;
-    } catch (error) {
-      console.error('Job description extraction error:', error);
-      return '';
-    }
-  }
-
-  private buildScoringPrompt(job: Job, profile: UserProfile): string {
-    return `
-You are a job matching AI expert. Evaluate how well this job position aligns with the candidate's profile.
-
-CANDIDATE:
-- Name: ${profile.name}
-- Skills: ${profile.skills.join(', ')}
-- Target Roles: ${profile.targetRoles.join(', ')}
-- Experience: ${profile.experience} years
-- Education: ${profile.education}
-
-JOB:
-- Title: ${job.title}
-- Company: ${job.company}
-- Location: ${job.location}
-- Description: ${job.description || 'N/A'}
-- Required Skills: ${job.skills.join(', ') || 'Not specified'}
-
-SCORING RULES (1-10):
-- Skills (50%): Direct match with required/preferred skills.
-- Role (30%): Match with target roles and career path.
-- Experience (20%): Level fit (fresher vs senior).
-
-Respond STRICTLY with a valid JSON object:
-{
-  "matchScore": <number 1-10>,
-  "matchedSkills": [<list of candidate skills that match job requirements>],
-  "missingSkills": [<list of job requirements candidate lacks>],
-  "reasoning": "<2-3 sentence explanation of the score>",
-  "tailoringNotes": "<specific advice for adjusting the resume for this role>",
-  "skillGapAnalysis": {
-    "critical": ["skills that are non-negotiable"],
-    "suggested": ["skills that would be a bonus or adjacent skills mapping"]
-  }
-}
-`;
-  }
-
-  private buildResumeTailoringPrompt(job: Job, profile: UserProfile, jobDescription: string): string {
-    return `
-You are an expert resume writer. Tailor a resume for a specific job position.
-
-CANDIDATE PROFILE (Base Resume):
-${profile.resumeText || `Name: ${profile.name}
-Email: ${profile.email}
-Phone: ${profile.phone}
-Skills: ${profile.skills.join(', ')}
-Experience: ${profile.experience} years
-Education: ${profile.education}`}
-
-JOB POSITION:
-- Title: ${job.title}
-- Company: ${job.company}
-- Requirements: ${jobDescription}
-
-TASK:
-1. Rewrite the summary/objective to highlight relevant experience for this role
-2. Reorder skills to prioritize those matching the job requirements
-3. Adjust experience descriptions to emphasize relevant achievements
-4. Add any relevant keywords from the job description
-5. Keep it concise and ATS-friendly
-
-Return ONLY a JSON object:
-{
-  "tailoredContent": "<complete tailored resume in markdown format>",
-  "matchedSkills": [<skills that matched>],
-  "missingSkills": [<important skills the candidate is missing>],
-  "summary": "<2 sentence summary of tailoring changes>"
-}
-`;
   }
 
   private async callAI(prompt: string): Promise<string> {
-    // Always use Google Gemini directly with correct URL format
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
+    const isGoogle = !process.env.OPENAI_API_KEY;
+    let url: string;
+    let body: any;
 
-    const body = {
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 2000,
-      },
-    };
+    if (isGoogle) {
+      url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
+      body = {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 1000,
+        },
+      };
+    } else {
+      url = 'https://api.openai.com/v1/chat/completions';
+      body = {
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+        max_tokens: 1000,
+      };
+    }
 
     const response = await fetch(url, {
       method: 'POST',
@@ -167,11 +124,146 @@ Return ONLY a JSON object:
 
     if (!response.ok) {
       const errText = await response.text();
-      throw new Error(`AI API error: ${response.status} - ${errText.substring(0, 200)}`);
+      const errorMsg = `AI API error: ${response.status} - ${errText.substring(0, 150)}`;
+      throw new Error(errorMsg);
     }
 
     const data = await response.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    
+    if (isGoogle) {
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    } else {
+      return data.choices?.[0]?.message?.content || '';
+    }
+  }
+
+  async tailorResume(job: Job, profile: UserProfile, jobDescription: string): Promise<ResumeTailoring> {
+    if (!this.useAI) {
+      return this.simpleResumeTailoring(job, profile, jobDescription);
+    }
+
+    try {
+      const prompt = this.buildResumeTailoringPrompt(job, profile, jobDescription);
+      const response = await this.callAI(prompt);
+      return this.parseResumeResponse(response);
+    } catch (error) {
+      console.error('Resume tailoring failed, using simple tailoring:', error);
+      return this.simpleResumeTailoring(job, profile, jobDescription);
+    }
+  }
+
+  private keywordBasedScoring(job: Job, profile: UserProfile): AIGeneratedContent {
+    const jobSkills = this.extractSkills(job.description + ' ' + job.skills.join(' '));
+    const profileSkills = profile.skills.map(s => s.toLowerCase());
+    const profileText = profile.resumeText?.toLowerCase() || '';
+    
+    const matched: string[] = [];
+    const missing: string[] = [];
+    let skillScore = 0;
+    let resumeScore = 0;
+
+    for (const jobSkill of jobSkills) {
+      const found = profileSkills.find(ps => 
+        ps.includes(jobSkill) || jobSkill.includes(ps)
+      );
+      if (found) {
+        matched.push(found);
+        skillScore += 2;
+      } else if (profileText.includes(jobSkill)) {
+        matched.push(jobSkill);
+        skillScore += 1;
+        resumeScore += 1;
+      } else {
+        missing.push(jobSkill);
+      }
+    }
+
+    let roleScore = 0;
+    const jobTitleLower = job.title.toLowerCase();
+    const targetRoles = profile.targetRoles.map(r => r.toLowerCase());
+    
+    for (const role of targetRoles) {
+      if (jobTitleLower.includes(role) || role.includes(jobTitleLower)) {
+        roleScore += 3;
+      } else if (jobTitleLower.split(' ').some(word => role.includes(word))) {
+        roleScore += 1;
+      }
+    }
+
+    const expYears = profile.experience || 0;
+    if (job.experienceLevel === 'senior' && expYears >= 5) roleScore += 2;
+    if (job.experienceLevel === 'fresher' && expYears <= 2) roleScore += 2;
+
+    const locationFit = job.location.toLowerCase().includes('remote') || 
+                     profile.targetLocations.some(l => job.location.toLowerCase().includes(l.toLowerCase()));
+    if (locationFit) roleScore += 1;
+
+    const rawScore = (skillScore * 50 / Math.max(jobSkills.length, 1)) + 
+                   (roleScore * 30 / 10) + 
+                   (resumeScore * 20 / 10);
+    
+    const matchScore = Math.min(10, Math.max(1, rawScore));
+
+    return {
+      matchScore: Math.round(matchScore * 10) / 10,
+      matchedSkills: matched.slice(0, 5),
+      missingSkills: missing.slice(0, 3),
+      reasoning: `${matched.length} skills matched. ${job.title} at ${job.company}.`,
+      tailoringNotes: matched.length > 0 
+        ? `Highlight ${matched.slice(0, 3).join(', ')} in your resume.`
+        : 'Customize your summary to match job requirements.',
+      skillGapAnalysis: {
+        critical: missing.slice(0, 2),
+        suggested: this.findAdjacentSkills(missing)
+      }
+    };
+  }
+
+  private extractSkills(text: string): string[] {
+    const lower = text.toLowerCase();
+    return SKILL_KEYWORDS.filter(skill => lower.includes(skill));
+  }
+
+  private findAdjacentSkills(missing: string[]): string[] {
+    const adjacencyMap: Record<string, string[]> = {
+      'react': ['react native', 'next.js'],
+      'javascript': ['typescript', 'react'],
+      'python': ['django', 'flask', 'machine learning'],
+      'java': ['spring', 'spring boot'],
+      'node': ['express', 'node.js', 'graphql'],
+      'aws': ['azure', 'gcp', 'devops'],
+      'sql': ['postgresql', 'mysql', 'mongodb'],
+      'docker': ['kubernetes', 'CI/CD', 'devops'],
+    };
+
+    const suggested: string[] = [];
+    for (const skill of missing.slice(0, 2)) {
+      const adj = adjacencyMap[skill];
+      if (adj) suggested.push(...adj);
+    }
+    return [...new Set(suggested)].slice(0, 3);
+  }
+
+  private buildScoringPrompt(job: Job, profile: UserProfile): string {
+    return `
+Evaluate job match (1-10 score), return JSON only:
+
+CANDIDATE: ${profile.name}, Skills: ${profile.skills.join(', ') || 'none'}, Exp: ${profile.experience}y
+
+JOB: ${job.title} at ${job.company}, ${job.location}
+
+Return: {"matchScore": num, "matchedSkills": [], "missingSkills": [], "reasoning": "text", "tailoringNotes": "text"}
+`;
+  }
+
+  private buildResumeTailoringPrompt(job: Job, profile: UserProfile, jobDescription: string): string {
+    return `
+Tailor resume for "${job.title}" at "${job.company}". 
+
+Resume: ${profile.resumeText || 'No resume text'}
+
+Return JSON: {"tailoredContent": "...", "matchedSkills": [], "missingSkills": [], "summary": "..."}
+`;
   }
 
   private parseScoringResponse(response: string, profile: UserProfile): AIGeneratedContent {
@@ -191,7 +283,7 @@ Return ONLY a JSON object:
     } catch (e) {
       console.error('Parse error:', e);
     }
-    return this.fallbackScoring({} as Job, profile);
+    return this.keywordBasedScoring({} as Job, profile);
   }
 
   private parseResumeResponse(response: string): ResumeTailoring {
@@ -213,123 +305,31 @@ Return ONLY a JSON object:
       tailoredContent: response,
       matchedSkills: [],
       missingSkills: [],
-      summary: 'Resume tailored based on job requirements.',
+      summary: 'Resume tailored.',
     };
   }
 
-  private fallbackScoring(job: Job, profile: UserProfile): AIGeneratedContent {
-    const jobSkills = job.skills || [];
-    const profileSkills = profile.skills || [];
-    const matched = jobSkills.filter(s => 
-      profileSkills.some(ps => ps.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(ps.toLowerCase()))
-    );
-    const missing = jobSkills.filter(s => !matched.includes(s));
+  private simpleResumeTailoring(job: Job, profile: UserProfile, jobDescription: string): ResumeTailoring {
+    const jobSkills = this.extractSkills(jobDescription || job.description);
+    const profileSkills = profile.skills.map(s => s.toLowerCase());
+    
+    const matched = jobSkills.filter(s => profileSkills.some(ps => ps.includes(s) || s.includes(ps)));
+    const missing = jobSkills.filter(s => !profileSkills.some(ps => ps.includes(s) || s.includes(ps)));
 
-    const score = jobSkills.length > 0 
-      ? 5 + (matched.length / jobSkills.length) * 5 
-      : 5;
+    const summary = matched.length > 0 
+      ? `Matched skills: ${matched.join(', ')}. Add: ${missing.slice(0, 2).join(', ')}`
+      : 'Tailored resume - highlight relevant experience';
 
     return {
-      matchScore: Math.min(10, Math.round(score * 10) / 10),
+      tailoredContent: profile.resumeText || `Resume for ${profile.name}`,
       matchedSkills: matched,
       missingSkills: missing,
-      reasoning: `Matched ${matched.length} of ${jobSkills.length || 0} required skills.`,
-      tailoredNotes: matched.length > 0 
-        ? `Highlight ${matched.slice(0, 3).join(', ')} in your resume.`
-        : 'Customize your summary to match job requirements.',
-      skillGapAnalysis: {
-        critical: missing.slice(0, 2),
-        suggested: []
-      }
+      summary
     };
   }
 
-  private fallbackResumeTailoring(profile: UserProfile): ResumeTailoring {
-    return {
-      tailoredContent: profile.resumeText || `Resume for ${profile.name}\nSkills: ${profile.skills.join(', ')}`,
-      matchedSkills: profile.skills,
-      missingSkills: [],
-      summary: 'Resume formatting applied based on standard template.',
-    };
-  }
-
-  async getATSScore(job: Job, profile: UserProfile): Promise<{ score: number; tips: string[] }> {
-    const prompt = `
-      Evaluate the following resume for ATS (Applicant Tracking System) compatibility for the given job.
-      
-      JOB: ${job.title} at ${job.company}
-      RESUME: ${profile.resumeText.substring(0, 2000)}
-      
-      Check for:
-      - Keyword density
-      - Formatting issues (simple vs complex)
-      - Contact info presence
-      - Action verbs
-      - Section headers
-      
-      Return JSON:
-      {
-        "score": <number 0-100>,
-        "tips": ["tip 1", "tip 2", ...]
-      }
-    `;
-
-    try {
-      const response = await this.callAI(prompt);
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        return {
-          score: parsed.score || 70,
-          tips: parsed.tips || []
-        };
-      }
-    } catch (e) {
-      console.error('ATS score error:', e);
-    }
-    return { score: 75, tips: ['Ensure relevant keywords are present in your experience section.'] };
-  }
-
-  async searchJobsWithAI(params: any): Promise<Job[]> {
-    const prompt = `
-      Act as a high-performance job search engine. Find the latest job opportunities matching these criteria:
-      KEYWORDS: ${params.keywords.join(', ')}
-      LOCATIONS: ${params.locations.join(', ')}
-      
-      Return a list of 5-8 highly relevant job opportunities that actually exist on major platforms (Naukri, LinkedIn, Indeed, etc.).
-      
-      Respond ONLY with a JSON array:
-      [
-        {
-          "title": "...",
-          "company": "...",
-          "location": "...",
-          "salary": "...",
-          "url": "...",
-          "platform": "naukri|linkedin|indeed"
-        }
-      ]
-    `;
-
-    try {
-      const response = await this.callAI(prompt);
-      const jsonMatch = response.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        const parsedJobs = JSON.parse(jsonMatch[0]);
-        return parsedJobs.map((j: any) => ({
-          ...j,
-          id: `ai-${Math.random().toString(36).substr(2, 9)}`,
-          postedDate: new Date().toISOString(),
-          skills: [],
-          applied: false,
-          status: 'new',
-          matchScore: 8
-        }));
-      }
-    } catch (e) {
-      console.error('AI Search error:', e);
-    }
-    return [];
+  isUsingAI(): boolean {
+    return this.useAI;
   }
 }
 
