@@ -1,17 +1,8 @@
 {
+  "version": 2,
+  "regions": ["iad1"],
   "framework": "nextjs",
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "installCommand": "npm install",
-  "regions": ["blr1"],
-  "functions": {
-    "src/app/api/**/*.ts": {
-      "maxDuration": 300,
-      "memory": 1024
-    }
-  },
-  "env": {
-    "AI_PROVIDER": "google",
-    "AI_MODEL": "gemma-4-26b-a4b-it"
-  }
+  "buildCommand": "next build",
+  "installCommand": "npm install --legacy-peer-deps",
+  "outputDirectory": ".next"
 }
