@@ -16,7 +16,7 @@ export class AIService {
 
   constructor() {
     this.apiKey = process.env.GOOGLE_AI_API_KEY || '';
-    this.model = 'gemini-1.5-pro'; // Using a more stable model name
+    this.model = 'gemini-2.0-flash';
     this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
   }
 
