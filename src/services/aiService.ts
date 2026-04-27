@@ -148,41 +148,30 @@ Return ONLY a JSON object:
   }
 
   private async callAI(prompt: string): Promise<string> {
-    const isGoogle = AI_CONFIG.provider === 'google';
-    const url = isGoogle
-      ? `${this.baseUrl}/models/${this.model}:generateContent?key=${this.apiKey}`
-      : 'https://api.openai.com/v1/chat/completions';
+    // Always use Google Gemini directly with correct URL format
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
 
-    const body = isGoogle
-      ? {
-          contents: [{ parts: [{ text: prompt }] }]
-        }
-      : {
-          model: 'gpt-4o-mini',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: AI_CONFIG.temperature,
-          max_tokens: AI_CONFIG.maxTokens,
-        };
+    const body = {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 2000,
+      },
+    };
 
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
 
     if (!response.ok) {
-      throw new Error(`AI API error: ${response.status}`);
+      const errText = await response.text();
+      throw new Error(`AI API error: ${response.status} - ${errText.substring(0, 200)}`);
     }
 
     const data = await response.json();
-    
-    if (isGoogle) {
-      return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    } else {
-      return data.choices?.[0]?.message?.content || '';
-    }
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   }
 
   private parseScoringResponse(response: string, profile: UserProfile): AIGeneratedContent {

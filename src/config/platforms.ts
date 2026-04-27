@@ -91,7 +91,7 @@ export const RATE_LIMITS = {
 
 export const AI_CONFIG = {
   provider: process.env.AI_PROVIDER || 'google',
-  model: process.env.AI_MODEL || 'gemma-4-26b-a4b-it',
+  model: process.env.AI_MODEL || 'gemini-1.5-flash',
   temperature: 0.7,
   maxTokens: 2000,
 };
