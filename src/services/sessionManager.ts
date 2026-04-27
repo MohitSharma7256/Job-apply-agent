@@ -1,121 +1,131 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { supabase } from '@/services/supabaseService';
+import { encrypt, decrypt } from '@/lib/encryption';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+export interface SessionData {
+  cookies: any[];
+  localStorage?: Record<string, string>;
+  userAgent?: string;
+  capturedAt: string;
+}
 
 export interface PlatformSession {
   id: string;
   platform: string;
   userId: string;
-  cookies: string;
-  userAgent: string;
+  sessionData: SessionData;
+  expiresAt: string | null;
+  isValid: boolean;
   createdAt: string;
-  expiresAt: string;
-  lastUsed: string;
-  isActive: boolean;
 }
 
-export interface PlatformCredentials {
-  platform: string;
-  email: string;
-  password: string;
-}
+export class LoginManager {
+  // Save session to Supabase (encrypted)
+  async saveSession(
+    userId: string,
+    platform: string,
+    sessionData: SessionData
+  ): Promise<boolean> {
+    try {
+      const encryptedData = encrypt(JSON.stringify(sessionData));
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
 
-export class SessionManager {
-  private userId: string | null = null;
+      const { error } = await supabase
+        .from('sessions')
+        .upsert({
+          id: `${userId}-${platform}`,
+          platform,
+          user_id: userId,
+          encrypted_data: encryptedData,
+          expires_at: expiresAt,
+          is_valid: true,
+          created_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
 
-  constructor() {
-    if (typeof window !== 'undefined') {
-      this.userId = localStorage.getItem('user_id') || this.generateUserId();
+      if (error) {
+        console.error('Session save error:', error);
+        return false;
+      }
+
+      console.log(`✅ Session saved for ${platform}`);
+      return true;
+    } catch (e) {
+      console.error('Session save failed:', e);
+      return false;
     }
   }
 
-  private generateUserId(): string {
-    const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem('user_id', id);
-    return id;
+  // Get session from Supabase (decrypted)
+  async getSession(userId: string, platform: string): Promise<SessionData | null> {
+    try {
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('id', `${userId}-${platform}`)
+        .eq('is_valid', true)
+        .single();
+
+      if (error || !data) return null;
+
+      // Check expiry
+      if (data.expires_at && new Date(data.expires_at) < new Date()) {
+        await this.markSessionExpired(userId, platform);
+        return null;
+      }
+
+      const decrypted = decrypt(data.encrypted_data);
+      return JSON.parse(decrypted) as SessionData;
+    } catch (e) {
+      return null;
+    }
   }
 
-  getUserId(): string {
-    return this.userId || this.generateUserId();
+  // Get all sessions for a user
+  async getAllSessions(userId: string): Promise<{ platform: string; isValid: boolean; expiresAt: string | null; createdAt: string }[]> {
+    try {
+      const { data, error } = await supabase
+        .from('sessions')
+        .select('platform, is_valid, expires_at, created_at')
+        .eq('user_id', userId);
+
+      if (error || !data) return [];
+      return data.map(d => ({
+        platform: d.platform,
+        isValid: d.is_valid && (!d.expires_at || new Date(d.expires_at) > new Date()),
+        expiresAt: d.expires_at,
+        createdAt: d.created_at,
+      }));
+    } catch {
+      return [];
+    }
   }
 
-  async saveSession(platform: string, sessionData: any): Promise<void> {
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
-
-    await supabase.from('platform_sessions').upsert({
-      platform,
-      user_id: this.getUserId(),
-      cookies: JSON.stringify(sessionData.cookies || {}),
-      user_agent: sessionData.userAgent || '',
-      created_at: new Date().toISOString(),
-      expires_at: expiresAt.toISOString(),
-      last_used: new Date().toISOString(),
-      is_active: true,
-    }, {
-      onConflict: 'platform,user_id'
-    });
-  }
-
-  async getSession(platform: string): Promise<PlatformSession | null> {
-    const { data, error } = await supabase
-      .from('platform_sessions')
-      .select('*')
-      .eq('platform', platform)
-      .eq('user_id', this.getUserId())
-      .eq('is_active', true)
-      .gt('expires_at', new Date().toISOString())
-      .order('last_used', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (error || !data) return null;
-
-    return {
-      ...data,
-      cookies: data.cookies,
-    };
-  }
-
-  async invalidateSession(platform: string): Promise<void> {
+  // Mark session as expired
+  async markSessionExpired(userId: string, platform: string): Promise<void> {
     await supabase
-      .from('platform_sessions')
-      .update({ is_active: false })
-      .eq('platform', platform)
-      .eq('user_id', this.getUserId());
+      .from('sessions')
+      .update({ is_valid: false })
+      .eq('id', `${userId}-${platform}`);
   }
 
-  async getAllActiveSessions(): Promise<PlatformSession[]> {
-    const { data, error } = await supabase
-      .from('platform_sessions')
-      .select('*')
-      .eq('user_id', this.getUserId())
-      .eq('is_active', true)
-      .gt('expires_at', new Date().toISOString());
-
-    return data || [];
+  // Delete session
+  async deleteSession(userId: string, platform: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('sessions')
+      .delete()
+      .eq('id', `${userId}-${platform}`);
+    return !error;
   }
 
-  async getSessionHealth(): Promise<Record<string, { healthy: boolean; lastUsed: string }>> {
-    const sessions = await this.getAllActiveSessions();
-    
-    const health: Record<string, { healthy: boolean; lastUsed: string }> = {};
-    
-    for (const session of sessions) {
-      const lastUsed = new Date(session.last_used);
-      const hoursSinceUsed = (Date.now() - lastUsed.getTime()) / (1000 * 60 * 60);
-      
-      health[session.platform] = {
-        healthy: hoursSinceUsed < 24,
-        lastUsed: session.last_used,
-      };
-    }
-    
-    return health;
+  // Validate session by checking if cookies are still fresh
+  validateSession(session: SessionData): boolean {
+    if (!session?.cookies || session.cookies.length === 0) return false;
+
+    const capturedAt = new Date(session.capturedAt);
+    const ageInDays = (Date.now() - capturedAt.getTime()) / (1000 * 60 * 60 * 24);
+
+    // Sessions older than 25 days are considered stale
+    return ageInDays < 25;
   }
 }
 
-export const sessionManager = new SessionManager();
+export const loginManager = new LoginManager();

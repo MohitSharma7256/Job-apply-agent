@@ -7,7 +7,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "login:naukri": "ts-node src/scripts/login.ts naukri",
+    "login:linkedin": "ts-node src/scripts/login.ts linkedin",
+    "login:indeed": "ts-node src/scripts/login.ts indeed",
+    "login:apna": "ts-node src/scripts/login.ts apna",
+    "login:shine": "ts-node src/scripts/login.ts shine"
   },
   "dependencies": {
     "@google/generative-ai": "^0.3.0",
@@ -26,7 +31,7 @@
     "nodemailer": "^6.9.0",
     "openai": "^4.28.0",
     "playwright": "^1.42.0",
-    "puppeteer": "^22.0.0",
+
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "uuid": "^9.0.0",
