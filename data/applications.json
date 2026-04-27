@@ -1,0 +1,14 @@
+[
+  {
+    "id": "demo",
+    "jobId": "demo",
+    "jobTitle": "Software Engineer",
+    "company": "Demo Company",
+    "location": "Bangalore",
+    "salary": "12 LPA",
+    "platform": "naukri",
+    "appliedAt": "2026-04-27T10:00:00Z",
+    "status": "applied",
+    "notes": "Demo application"
+  }
+]
