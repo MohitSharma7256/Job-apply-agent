@@ -1,190 +1,85 @@
-# AI Job Hunt Automation Agent - v0.1.0
+# Job Apply Agent
 
 ## Overview
 
-A production-grade AI-powered job hunt automation system that streamlines job searching through intelligent matching, automated applications, and real-time progress tracking.
+Job Apply Agent is an AI-powered platform for discovering, matching, and applying to jobs automatically. It combines job search, resume tailoring, automated application workflows, and real-time status updates.
 
-## Tech Stack
+## Main Features
 
-- **Framework**: Next.js 14 (App Router) + TypeScript
-- **Database**: Supabase (Postgres + pgcrypto for encryption)
-- **AI**: OpenAI GPT-4o / Anthropic Claude Sonnet
-- **Automation**: Playwright with stealth mode
-- **WebSocket**: Socket.io (custom Node.js server)
-- **Queue**: BullMQ + Redis (Upstash Redis)
-- **UI**: Tailwind CSS + shadcn/ui + Zustand + React Query
-- **Deployment**: Railway / Render (NOT Vercel - requires persistent process)
+- Job scoring and matching based on candidate profile
+- Cover letter generation using AI
+- Automated application submission with browser automation
+- Real-time notifications via Socket.io
+- Health checks for Supabase, Redis, and queue services
 
-## Architecture
+## Technology Stack
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Next.js Frontend                        │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
-│  │   Dashboard │  │   Settings  │  │      Job Search          │ │
-│  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
-└─────────────────────────────┬───────────────────────────────────┘
-                              │ API Routes
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    Custom Node.js Server                         │
-│  ┌─────────────┐  ┌─────────────���  ┌─────────────────────────┐ │
-│  │  Next.js    │  │  Socket.io  │  │    BullMQ Worker        │ │
-│  │  Handler    │  │  Server     │  │    (Job Processor)       │ │
-│  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-        ┌─────────────────────┼─────────────────────┐
-        ▼                     ▼                     ▼
-┌───────────────┐    ┌───────────────┐    ┌───────────────┐
-│   Supabase    │    │    Redis      │    │   Playwright  │
-│   (Storage)   │    │   (Queue)    │    │   (Browser)   │
-└───────────────┘    └───────────────┘    └───────────────┘
+- Next.js 14 + TypeScript
+- Supabase
+- Socket.io
+- BullMQ + Redis
+- Playwright
+- OpenAI and AI services
+- Tailwind CSS
+
+## Installation
+
+```bash
+cd /workspaces/Job-apply-agent
+npm install
 ```
 
-## Core Features
+## Environment Setup
 
-### 1. AI-Powered Job Matching
-- Weighted scoring: Skills (40%), Experience (25%), Location (20%), Salary (15%)
-- Skill gap analysis
-- AI-generated cover letters
-- Company research with caching
-
-### 2. Automated Application Processing
-- Playwright-based form filling with stealth mode
-- Human-like delays and interactions
-- Platform-specific rate limiting
-- Persistent browser contexts
-
-### 3. Real-Time Updates
-- Socket.io for live job application status
-- Activity feed with color-coded events
-- Platform health monitoring
-
-### 4. Session Management
-- AES-256-GCM encrypted platform sessions
-- Secure credential storage
-- Session expiration and refresh
-
-### 5. Job Queue System
-- BullMQ for reliable job processing
-- Retry logic with exponential backoff
-- Priority queue support
-- Scheduled job execution
-
-## API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/jobs/search` | GET/POST | Search jobs, add new jobs |
-| `/api/jobs/[id]/apply` | GET/POST/DELETE | Apply to job |
-| `/api/queue/status` | GET/POST/DELETE | Queue management |
-| `/api/health` | GET | System health check |
-| `/api/sessions/[platform]` | GET/POST/DELETE | Session management |
-| `/api/analytics/summary` | GET | Application statistics |
-| `/api/resume/upload` | GET/POST/PUT/DELETE | Resume management |
-| `/api/config` | GET/POST | Auto-apply configuration |
-
-## Socket.io Events
-
-### Server → Client
-| Event | Description |
-|-------|-------------|
-| `job:new` | New job discovered |
-| `job:matched` | Job matched profile |
-| `job:applying` | Application in progress |
-| `job:applied` | Application completed |
-| `job:failed` | Application failed |
-| `platform:status` | Platform health update |
-| `queue:update` | Queue status update |
-
-### Client → Server
-| Event | Description |
-|-------|-------------|
-| `jobs:subscribe` | Subscribe to job updates |
-| `jobs:unsubscribe` | Unsubscribe from updates |
-| `profile:update` | Update user profile |
-
-## Database Schema
-
-### Tables
-- `users` - User accounts
-- `user_profiles` - Extended user data
-- `jobs` - Job listings
-- `applications` - Job applications
-- `job_queue` - Application queue
-- `platform_sessions` - Encrypted sessions
-- `resume_variants` - Resume versions
-- `cover_letters` - Generated letters
-- `company_cache` - Company research cache
-- `activity_log` - Activity history
-- `auto_apply_config` - Auto-apply settings
-- `platform_credentials` - Encrypted credentials
-
-## Environment Variables
+Create a `.env` file in the project root with values similar to:
 
 ```env
-# Supabase
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-
-# AI Services
 OPENAI_API_KEY=
 ANTHROPIC_API_KEY=
 SERPER_API_KEY=
-
-# Redis
-REDIS_HOST=
-REDIS_PORT=
-REDIS_PASSWORD=
-
-# Security
-SESSION_SECRET=
-
-# Browserless
-BROWSERLESS_API_KEY=
+REDIS_URL=redis://localhost:6379
+JWT_SECRET=your-secret
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-## Deployment
+> If using separate Redis host config, set `REDIS_HOST` and `REDIS_PORT` instead of `REDIS_URL`.
 
-### Railway
+## Available Scripts
+
+- `npm run dev` — Start the application in development mode
+- `npm run build` — Build the Next.js application for production
+- `npm run start` — Start the server in production
+- `npm run lint` — Run lint checks
+- `npm run login:<platform>` — Run login helper scripts for supported platforms
+
+## Project Structure
+
+- `src/app/` — Next.js App Router pages and API routes
+- `src/lib/` — shared helpers and utilities
+- `src/server/` — custom server and Socket.io server code
+- `src/services/` — service logic and automation handlers
+- `src/config/` — platform configuration definitions
+- `src/types/` — TypeScript type definitions
+
+## Fixes Applied
+
+- Added `src/lib/redis.ts` to enable Redis access from health checks and helpers
+- Installed `jsonwebtoken` and `@types/jsonwebtoken`
+- Updated README with setup, installation, and running guidance
+
+## Running the Application
 
 ```bash
-railway init
-railway add redis
-railway up
-```
-
-### Render
-
-```yaml
-# render.yaml
-services:
-  - type: web
-    buildCommand: npm install && npm run build
-    startCommand: npm run start:server
-```
-
-## Getting Started
-
-```bash
-# Install dependencies
 npm install
-
-# Generate Prisma client
-npm run db:generate
-
-# Run migrations
-npm run db:migrate
-
-# Start development server
-npm run dev:server
-
-# Start production
-npm run build && npm run start:server
+npm run build
+npm run dev
 ```
 
-## License
+## Notes
 
-MIT
+- Supabase and Redis are required for the project to function correctly.
+- Ensure `JWT_SECRET` and Supabase credentials are defined in `.env`.
+- The custom server runs with `ts-node` in this repository.

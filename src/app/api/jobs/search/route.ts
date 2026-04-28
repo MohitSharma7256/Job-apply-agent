@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { matchJobWithProfile } from '@/lib/ai/matchEngine';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { supabase } from '@/lib/supabaseClient';
+import { matchEngine } from '@/lib/ai/matchEngine';
 
 export const runtime = 'nodejs';
 
@@ -50,15 +46,15 @@ export async function GET(request: NextRequest) {
     };
 
     const enrichedJobs = await Promise.all(
-      (jobs || []).map(async (job) => {
+      (jobs || []).map(async (job: any) => {
         try {
-          const matchResult = await matchJobWithProfile(job, profile);
+          const matchResult = await matchEngine.scoreJob(job, profile as any);
           return {
             ...job,
-            matchScore: matchResult.totalScore,
-            skillMatch: matchResult.skillMatch,
-            missingSkills: matchResult.missingSkills,
-            experienceMatch: matchResult.experienceMatch,
+            matchScore: matchResult.score,
+            skillMatch: matchResult.matchedSkills || [],
+            missingSkills: matchResult.missingSkills || [],
+            experienceMatch: 'match',
           };
         } catch {
           return {

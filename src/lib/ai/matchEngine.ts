@@ -1,3 +1,6 @@
+import { OpenAI } from 'openai';
+import { Job, UserProfile } from '@/types';
+
 let openai: OpenAI | null = null;
 const getOpenAI = () => {
   if (!openai) {

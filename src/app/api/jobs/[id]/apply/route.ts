@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { getAIService } from '@/lib/ai/matchEngine';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { supabase } from '@/lib/supabaseClient';
+import { coverLetterService } from '@/services/coverLetterService';
 
 export const runtime = 'nodejs';
 
@@ -80,9 +76,8 @@ export async function POST(
     let generatedCoverLetter = coverLetter;
     if (!generatedCoverLetter && job) {
       try {
-        const aiService = getAIService();
-        const profile = { name: 'Candidate', skills: [], experience: 3 };
-        generatedCoverLetter = await aiService.generateCoverLetter(job, profile);
+        const profile = { name: 'Candidate', skills: [], experience: 3, targetRoles: [], location: '', education: '', resumeText: '' };
+        generatedCoverLetter = await coverLetterService.generateCoverLetter(job, profile as any);
       } catch (error) {
         console.error('Cover letter generation failed:', error);
       }

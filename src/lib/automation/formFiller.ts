@@ -5,8 +5,26 @@ import Redis from 'ioredis';
 
 chromium.use(stealth());
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-const redis = new Redis(REDIS_URL, { maxRetriesPerRequest: null });
+const REDIS_URL = process.env.REDIS_URL || '';
+const createNoopRedis = () => {
+  const noop = () => noop;
+  const handler: ProxyHandler<any> = {
+    get(target, prop) {
+      if (prop === 'on' || prop === 'once' || prop === 'quit' || prop === 'disconnect' || prop === 'ping') {
+        return () => noop;
+      }
+      return noop;
+    },
+    apply(target, thisArg, args) {
+      return noop;
+    },
+  };
+  return new Proxy(noop, handler);
+};
+
+const redis = REDIS_URL
+  ? new Redis(REDIS_URL, { maxRetriesPerRequest: null })
+  : createNoopRedis();
 
 export interface JobApplication {
   jobId: string;

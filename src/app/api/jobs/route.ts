@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { matchEngine, coverLetterGen } from '@/lib/ai/matchEngine';
-import { companyResearch } from '@/lib/ai/companyResearch';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { supabase } from '@/lib/supabaseClient';
+import { matchEngine } from '@/lib/ai/matchEngine';
+import { companyResearchService } from '@/lib/ai/companyResearch';
 
 export const runtime = 'nodejs';
 
@@ -63,7 +59,7 @@ export async function POST(request: NextRequest) {
           matchScore = matchResult.score;
           
           if (job.companyDomain) {
-            companyProfile = await companyResearch.getCompanyProfile(job.company, job.companyDomain);
+            companyProfile = await companyResearchService.getCompanyProfile(job.company);
           }
         } catch (e) {
           console.error('Match scoring failed:', e);
