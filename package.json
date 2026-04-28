@@ -19,6 +19,13 @@
     "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/auth-helpers-react": "^0.15.0",
     "@supabase/supabase-js": "^2.39.0",
+    "@types/jsonwebtoken": "^9.0.0",
+    "@types/node": "20.11.0",
+    "@types/nodemailer": "^6.4.0",
+    "@types/react": "18.2.0",
+    "@types/react-dom": "18.2.0",
+    "@types/socket.io": "^3.0.1",
+    "@types/uuid": "^9.0.0",
     "autoprefixer": "^10.4.0",
     "axios": "^1.6.0",
     "bullmq": "^5.76.2",
@@ -45,22 +52,15 @@
     "socket.io-client": "^4.8.3",
     "tailwind-merge": "^2.2.0",
     "tailwindcss": "^3.4.0",
+    "ts-node": "^10.9.0",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^6.0.3",
     "uuid": "^14.0.0",
     "xlsx": "^0.18.5",
     "zod": "^3.22.0"
   },
   "devDependencies": {
-    "@types/jsonwebtoken": "^9.0.0",
-    "@types/node": "20.11.0",
-    "@types/nodemailer": "^6.4.0",
-    "@types/react": "18.2.0",
-    "@types/react-dom": "18.2.0",
-    "@types/socket.io": "^3.0.1",
-    "@types/uuid": "^9.0.0",
     "eslint": "8.56.0",
-    "eslint-config-next": "^16.2.4",
-    "ts-node": "^10.9.0",
-    "tsconfig-paths": "^4.2.0",
-    "typescript": "^6.0.3"
+    "eslint-config-next": "^16.2.4"
   }
 }
