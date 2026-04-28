@@ -20,7 +20,10 @@ import {
   ArrowUpDown,
   Send,
   Zap,
-  MapPin
+  MapPin,
+  Upload,
+  FileText,
+  Trash2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn, getPlatformIcon, getStatusColor } from "@/utils/helpers";
@@ -87,6 +90,8 @@ export default function Dashboard() {
   const [newKeyword, setNewKeyword] = useState("");
   const [newLocation, setNewLocation] = useState("");
   const [targetRoleInput, setTargetRoleInput] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedResume, setUploadedResume] = useState<{ name: string; url: string } | null>(null);
 
   useEffect(() => {
     const savedProfile = localStorage.getItem(STORAGE_KEY_PROFILE);
@@ -239,6 +244,42 @@ export default function Dashboard() {
       console.error("Batch apply error:", error);
       showToast("Batch application failed. Please try again.", "error");
       setBatchProgress(prev => ({ ...prev, isOpen: false }));
+    }
+  };
+
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      showToast("Please upload a PDF resume", "error");
+      return;
+    }
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("userId", "default-user");
+
+    try {
+      const res = await fetch("/api/profile/resume", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setProfile({ ...profile, resumeUrl: data.url, resumeText: data.text || "" });
+        setUploadedResume({ name: file.name, url: data.url });
+        showToast("Resume uploaded successfully!", "success");
+      } else {
+        showToast(data.error || "Upload failed", "error");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      showToast("Upload failed. Please try again.", "error");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -679,6 +720,52 @@ export default function Dashboard() {
                               className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500/50 outline-none"
                             />
                           </div>
+                        </div>
+                      </GlassCard>
+
+                      <GlassCard className="p-8">
+                        <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-6">Resume / CV</h4>
+                        <div className={cn(
+                          "relative border-2 border-dashed rounded-2xl p-8 transition-all flex flex-col items-center justify-center text-center",
+                          isUploading ? "border-blue-500/50 bg-blue-500/5" : "border-white/10 hover:border-white/20 bg-white/2"
+                        )}>
+                          {isUploading ? (
+                            <div className="space-y-3">
+                              <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto" />
+                              <p className="text-sm text-slate-400 font-medium">Analyzing your resume...</p>
+                            </div>
+                          ) : profile.resumeUrl ? (
+                            <div className="space-y-4">
+                              <div className="h-16 w-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto border border-emerald-500/20">
+                                <FileText className="w-8 h-8 text-emerald-400" />
+                              </div>
+                              <div>
+                                <p className="font-bold text-white">Resume Attached</p>
+                                <p className="text-xs text-slate-500 mt-1">Ready for automatic applications</p>
+                              </div>
+                              <div className="flex gap-3 justify-center">
+                                <a href={profile.resumeUrl} target="_blank" className="text-xs font-bold text-blue-400 hover:underline">View</a>
+                                <button 
+                                  onClick={() => setProfile({ ...profile, resumeUrl: "", resumeText: "" })}
+                                  className="text-xs font-bold text-red-400 hover:underline"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="h-16 w-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4 border border-white/5">
+                                <Upload className="w-8 h-8 text-slate-500" />
+                              </div>
+                              <p className="text-white font-bold mb-1">Upload your resume</p>
+                              <p className="text-xs text-slate-500 mb-6">PDF format only (Max 5MB)</p>
+                              <label className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold cursor-pointer shadow-lg shadow-blue-600/20 transition-all">
+                                Select File
+                                <input type="file" className="hidden" accept=".pdf" onChange={handleResumeUpload} />
+                              </label>
+                            </>
+                          )}
                         </div>
                       </GlassCard>
 
