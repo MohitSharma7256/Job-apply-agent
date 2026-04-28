@@ -1,7 +1,7 @@
 import Redis from 'ioredis';
 
 const redisUrl = process.env.REDIS_URL || process.env.REDIS_HOST
-  ? `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT || '6379'}`
+  ? `redis:/${process.env.REDIS_HOST}:${process.env.REDIS_PORT || '6379'}`
   : '';
 
 const createNoopRedis = () => {

@@ -1,8 +1,6 @@
-import { chromium, Browser, Page, BrowserContext } from 'playwright';
+import { chromium, Browser, Page } from 'playwright';
 import { Job, UserProfile } from '../types';
 import { loginManager } from './sessionManager';
-import { resumeTailor } from '../..//ai/resumeTailor';
-import { referralHunter } from '../..//automation/referralHunter';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -40,7 +38,7 @@ export class AutomationService {
     await new Promise(resolve => setTimeout(resolve, delay));
   }
 
-  async applyToJob(job: Job, profile: UserProfile): Promise<AutomationResult> {
+  async applyToJob(job: Job, profile: UserProfile, userId: string): Promise<AutomationResult> {
     const browser = await this.init();
     const context = await browser.newContext({
       userAgent: await this.getRandomUserAgent(),
@@ -48,32 +46,15 @@ export class AutomationService {
     });
 
     // INJECT COOKIES
-    const session = await loginManager.getSession('default-user', job.platform);
+    const session = await loginManager.getSession(userId, job.platform);
     if (session && session.cookies) {
       await context.addCookies(session.cookies);
     }
 
-    // RESUME TAILORING
-    let resumePath: string | null = null;
-    try {
-      const { pdfBuffer } = await resumeTailor.tailorResume(profile, job);
-      resumePath = path.join(os.tmpdir(), `tailored_resume_${Date.now()}.pdf`);
-      fs.writeFileSync(resumePath, new Uint8Array(pdfBuffer));
-    } catch (e) {
-      if (profile.resumeUrl?.startsWith('http')) {
-        const res = await fetch(profile.resumeUrl);
-        resumePath = path.join(os.tmpdir(), `default_resume_${Date.now()}.pdf`);
-        fs.writeFileSync(resumePath, new Uint8Array(await res.arrayBuffer()));
-      }
-    }
-
     const page = await context.newPage();
+    let resumePath: string | null = null;
 
     try {
-      if (job.platform === 'linkedin') {
-        await referralHunter.huntAndConnect(page, job, profile).catch(() => {});
-      }
-
       await page.goto(job.url, { waitUntil: 'domcontentloaded', timeout: 30000 });
       await this.humanDelay(2000, 4000);
 
@@ -83,15 +64,12 @@ export class AutomationService {
       switch (job.platform) {
         case 'naukri': return await this.applyNaukri(page, job, profile, resumePath);
         case 'linkedin': return await this.applyLinkedIn(page, job, profile);
-        case 'greenhouse': return await this.applyGreenhouse(page, job, profile, resumePath);
-        case 'indeed': return await this.applyIndeed(page, job, profile, resumePath);
         default: return { success: false, status: 'failed', message: 'Platform not supported' };
       }
     } catch (error: any) {
       return { success: false, status: 'failed', message: error.message };
     } finally {
       await context.close();
-      if (resumePath && fs.existsSync(resumePath)) fs.unlinkSync(resumePath);
     }
   }
 
@@ -104,13 +82,10 @@ export class AutomationService {
   private async applyNaukri(page: Page, job: Job, profile: UserProfile, resumePath: string | null): Promise<AutomationResult> {
     const loginBtn = page.locator('text=Login').first();
     if (await loginBtn.isVisible().catch(() => false)) return { success: false, status: 'failed', reason: 'login_required', message: 'Login required' };
+    
     const applyBtn = page.locator('.apply-button, #apply-button, [class*="apply"]').first();
     if (await applyBtn.isVisible().catch(() => false)) {
       await applyBtn.click();
-      if (resumePath) {
-        const fileInput = page.locator('input[type="file"]').first();
-        if (await fileInput.isVisible().catch(() => false)) await fileInput.setInputFiles(resumePath);
-      }
       return { success: true, status: 'success', message: 'Applied' };
     }
     return { success: false, status: 'failed', message: 'Button not found' };
@@ -123,26 +98,6 @@ export class AutomationService {
       return { success: true, status: 'success', message: 'Applied via Easy Apply' };
     }
     return { success: false, status: 'failed', message: 'Easy Apply not found' };
-  }
-
-  private async applyGreenhouse(page: Page, job: Job, profile: UserProfile, resumePath: string | null): Promise<AutomationResult> {
-    const form = page.locator('#application_form').first();
-    if (await form.isVisible().catch(() => false)) {
-      await page.fill('#first_name', profile.name.split(' ')[0] || '');
-      if (resumePath) await page.locator('input[type="file"]').first().setInputFiles(resumePath);
-      return { success: true, status: 'success', message: 'Form filled' };
-    }
-    return { success: false, status: 'failed', message: 'Form not found' };
-  }
-
-  private async applyIndeed(page: Page, job: Job, profile: UserProfile, resumePath: string | null): Promise<AutomationResult> {
-    const applyBtn = page.locator('#indeedApplyButton, .indeed-apply-button').first();
-    if (await applyBtn.isVisible().catch(() => false)) {
-      await applyBtn.click();
-      if (resumePath) await page.locator('input[type="file"]').first().setInputFiles(resumePath);
-      return { success: true, status: 'success', message: 'Applied' };
-    }
-    return { success: false, status: 'failed', message: 'Apply button not found' };
   }
 
   async close() { if (this.browser) { await this.browser.close(); this.browser = null; } }

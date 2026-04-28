@@ -27,7 +27,7 @@ export class MatchEngine {
   async scoreJob(profile: UserProfile, job: Job): Promise<MatchResult> {
     console.log(`[AI Match] Scoring job: ${job.title} at ${job.company}`);
     
-    // AI-based scoring prompt
+    / AI-based scoring prompt
     const prompt = `
       Compare the following User Profile with the Job Description.
       
@@ -64,7 +64,7 @@ export class MatchEngine {
       };
     } catch (error) {
       console.error('[AI Match] Error:', error);
-      // Fallback simple scoring
+      / Fallback simple scoring
       return {
         score: 50,
         matchedSkills: [],

@@ -1,73 +1,59 @@
 import { Worker } from 'bullmq';
-import { connection } from '../lib/queue/jobQueue';
-import { automationService } from '../services/automationService';
-import { Job, UserProfile } from '../types';
+import { Server } from 'socket.io';
 import { supabase } from '../services/dbService';
+import { automationService } from '../services/automationService';
 
-export const startBrowserWorker = (io: any) => {
-  const worker = new Worker('job-applications', async (bullJob) => {
-    const { job, profile, userId } = bullJob.data as { job: Job; profile: UserProfile; userId: string };
-
-    console.log(`[Worker] Processing Job: ${job.title} for ${userId}`);
+export const startBrowserWorker = (io: Server) => {
+  const worker = new Worker('browser-queue', async (job) => {
+    const { userId, jobId, jobData, profile } = job.data;
     
-    // Emit "Applying" event via Socket.io
-    io.to(`user:${userId}`).emit('job:applying', { 
-      jobId: job.id, 
-      step: 'login' 
-    });
+    console.log(`[Worker] Processing job ${jobId} for user ${userId}`);
 
     try {
-      // Execute Playwright Automation
-      const result = await automationService.applyToJob(job, profile);
+      // Inject cookies, emit "Applying" event via Socket.io
+      io.to(`user:${userId}`).emit('job:status', {
+        jobId,
+        status: 'applying',
+        message: `Applying to ${jobData.company}...`
+      });
+
+      // 2. Execute Playwright Automation
+      const result = await automationService.applyToJob(jobData, profile, userId);
 
       if (result.success) {
-        console.log(`[Worker] Success: ${job.title}`);
-        io.to(`user:${userId}`).emit('job:applied', { 
-          jobId: job.id, 
-          applicationId: result.message 
-        });
-        
-        // Update DB
+        // 3. Update DB
         await supabase
           .from('applications')
-          .insert({
-            user_id: userId,
-            job_id: job.id,
-            platform: job.platform,
-            status: 'applied'
-          });
-          
-      } else {
-        console.error(`[Worker] Failed: ${result.message}`);
-        
-        if (result.reason === 'captcha') {
-          io.to(`user:${userId}`).emit('captcha:detected', { 
-            jobId: job.id, 
-            platform: job.platform 
-          });
-        }
+          .update({ status: 'applied', appliedAt: new Date().toISOString() })
+          .eq('jobId', jobId)
+          .eq('userId', userId);
 
-        io.to(`user:${userId}`).emit('job:failed', { 
-          jobId: job.id, 
-          reason: result.message 
+        // 4. Emit success
+        io.to(`user:${userId}`).emit('job:status', {
+          jobId,
+          status: 'applied',
+          message: `Successfully applied to ${jobData.company}!`
         });
+      } else {
+        throw new Error(result.message);
       }
-
     } catch (error: any) {
-      console.error(`[Worker] Critical Error:`, error.message);
-      io.to(`user:${userId}`).emit('job:failed', { 
-        jobId: job.id, 
-        reason: 'Internal Worker Error' 
+      console.error(`[Worker] Job ${jobId} failed:`, error.message);
+      
+      io.to(`user:${userId}`).emit('job:status', {
+        jobId,
+        status: 'failed',
+        message: `Failed: ${error.message}`
       });
+
       throw error; // Let BullMQ handle retry
     }
-
-  }, { connection, concurrency: 3 });
-
-  worker.on('failed', (job, err) => {
-    console.error(`[Worker] Job ${job?.id} failed with ${err.message}`);
+  }, {
+    connection: {
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT || '6379'),
+    }
   });
 
-  console.log('[Worker] Browser worker started and listening...');
   return worker;
 };

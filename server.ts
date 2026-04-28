@@ -3,7 +3,7 @@ import { createServer } from 'http';
 import { parse } from 'url';
 import next from 'next';
 import { Server } from 'socket.io';
-import { supabase } from './src/services/supabaseService';
+import { supabase } from './src/services/dbService';
 import { emailService } from './src/services/emailService';
 import { startBrowserWorker } from './src/workers/browserWorker';
 

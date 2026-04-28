@@ -32,7 +32,7 @@ export function useJobPolling({ enabled, intervalMs = 30000, onNewJobs }: UseJob
         onNewJobs?.(newJobs);
       }
     } catch (e) {
-      // Silent fail - polling is best-effort
+      / Silent fail - polling is best-effort
     } finally {
       setIsPolling(false);
     }

@@ -13,7 +13,7 @@ export async function GET() {
       .limit(50);
 
     if (error) {
-      // If table doesn't exist yet, return empty
+      / If table doesn't exist yet, return empty
       return NextResponse.json({ success: true, jobs: [] });
     }
 

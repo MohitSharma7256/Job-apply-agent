@@ -28,7 +28,7 @@ export abstract class JobSearchAdapter {
         lastError = error;
         console.warn(`[${this.platformName}] Attempt ${i + 1} failed: ${error.message}`);
         if (i < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
+          await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); / Exponential backoff
         }
       }
     }

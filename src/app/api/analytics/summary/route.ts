@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     success: true,
     summary: {
       today: todayCount,
-      // ... rest is same
+      / ... rest is same
     },
   });
 }

@@ -7,7 +7,7 @@ interface CacheEntry {
 
 export class JobCacheService {
   private cache: Map<string, CacheEntry> = new Map();
-  private readonly TTL = 10 * 60 * 1000; // 10 minutes
+  private readonly TTL = 10 * 60 * 1000; / 10 minutes
 
   get(key: string): Job[] | null {
     const entry = this.cache.get(key);

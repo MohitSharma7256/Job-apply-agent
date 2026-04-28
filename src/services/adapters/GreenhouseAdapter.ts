@@ -44,7 +44,7 @@ export class GreenhouseAdapter extends JobSearchAdapter {
               });
           }
         } catch (e) {
-          // Skip company if failed
+          / Skip company if failed
         }
         return [];
       });

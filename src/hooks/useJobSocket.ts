@@ -30,7 +30,7 @@ export function useJobSocket() {
       s.on('connect', () => setIsConnected(true));
       s.on('disconnect', () => setIsConnected(false));
 
-      // Catch-all for events
+      / Catch-all for events
       const eventTypes = ['job:found', 'job:applying', 'job:applied', 'job:failed', 'job:skipped', 'captcha:detected'];
       
       eventTypes.forEach(type => {

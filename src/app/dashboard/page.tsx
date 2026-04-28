@@ -85,7 +85,7 @@ export default function Dashboard() {
     results: { jobId: string; success: boolean; message: string; jobTitle: string }[];
   }>({ isOpen: false, total: 0, results: [] });
   
-  // Input states
+  / Input states
   const [newSkill, setNewSkill] = useState("");
   const [newKeyword, setNewKeyword] = useState("");
   const [newLocation, setNewLocation] = useState("");
@@ -222,8 +222,8 @@ export default function Dashboard() {
 
       const data = await res.json();
       if (data.success) {
-        // Since the API takes time, we should ideally stream results.
-        // For now, we'll just update the results from the final response.
+        / Since the API takes time, we should ideally stream results.
+        / For now, we'll just update the results from the final response.
         const mappedResults = data.results.map((r: any) => ({
           ...r,
           jobTitle: jobsToApply.find(j => j.id === r.jobId)?.title || "Unknown Job"
@@ -233,7 +233,7 @@ export default function Dashboard() {
         showToast(`Batch complete: ${data.appliedCount} applied`, "success");
         loadApplications();
         
-        // Update jobs list
+        / Update jobs list
         const appliedIds = data.results.filter((r: any) => r.success).map((r: any) => r.jobId);
         setJobs(prev => prev.map(j => appliedIds.includes(j.id) ? { ...j, applied: true } : j));
       } else {
@@ -878,7 +878,7 @@ export default function Dashboard() {
     </div>
   );
 
-  // Helper functions
+  / Helper functions
   function addSkill() {
     if (newSkill.trim() && !profile.skills.includes(newSkill.trim())) {
       setProfile({ ...profile, skills: [...profile.skills, newSkill.trim()] });

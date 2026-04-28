@@ -328,6 +328,34 @@ Return JSON: {"tailoredContent": "...", "matchedSkills": [], "missingSkills": []
     };
   }
 
+  async analyzeEmail(body: string): Promise<{ isUpdate: boolean; jobId: string; newStatus: string }> {
+    if (!this.useAI) {
+      return { isUpdate: false, jobId: '', newStatus: '' };
+    }
+
+    const prompt = `
+Analyze if this email is a job application status update.
+EMAIL: "${body}"
+Return JSON only: {"isUpdate": boolean, "jobId": "string", "newStatus": "applied|interview|rejected|offered"}
+`;
+
+    try {
+      const response = await this.callAI(prompt);
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return {
+          isUpdate: !!parsed.isUpdate,
+          jobId: parsed.jobId || '',
+          newStatus: parsed.newStatus || 'applied'
+        };
+      }
+    } catch (e) {
+      console.error('Email analysis failed:', e);
+    }
+    return { isUpdate: false, jobId: '', newStatus: '' };
+  }
+
   isUsingAI(): boolean {
     return this.useAI;
   }

@@ -3,7 +3,7 @@ import { loginManager } from '../../../services/sessionManager';
 
 export const runtime = 'nodejs';
 
-// GET: Fetch all platform sessions for a user
+/ GET: Fetch all platform sessions for a user
 export async function GET(request: NextRequest) {
   const userId = request.headers.get('x-user-id') || 'default-user';
   try {
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// DELETE: Remove a specific session
+/ DELETE: Remove a specific session
 export async function DELETE(request: NextRequest) {
   const userId = request.headers.get('x-user-id') || 'default-user';
   const { platform } = await request.json();

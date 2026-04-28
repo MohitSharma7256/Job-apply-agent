@@ -39,7 +39,7 @@ export class JobSearchService {
         }
       });
 
-      // Emergency Fallback: If no jobs found, try a generic web search
+      / Emergency Fallback: If no jobs found, try a generic web search
       if (allJobs.length === 0) {
         console.log('No jobs found via adapters, triggering Emergency Google Fallback...');
         const fallbackJobs = await this.triggerGoogleFallback(params);

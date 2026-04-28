@@ -30,13 +30,13 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Convert file to buffer
+    / Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
     const fileName = `${userId}/resume_${Date.now()}.pdf`;
 
-    // Try to upload to Supabase Storage
+    / Try to upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('resumes')
       .upload(fileName, buffer, {
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     if (uploadError) {
       console.error('Supabase storage error:', uploadError);
-      // Fallback: store base64 in DB if storage bucket doesn't exist
+      / Fallback: store base64 in DB if storage bucket doesn't exist
       const base64 = buffer.toString('base64');
       const dataUrl = `data:application/pdf;base64,${base64}`;
 
@@ -58,14 +58,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Get public URL
+    / Get public URL
     const { data: publicUrlData } = supabase.storage
       .from('resumes')
       .getPublicUrl(fileName);
 
     const publicUrl = publicUrlData?.publicUrl || '';
 
-    // Save resume URL to user_profiles table
+    / Save resume URL to user_profiles table
     await supabase
       .from('user_profiles')
       .upsert({
