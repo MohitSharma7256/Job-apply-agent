@@ -24,15 +24,30 @@ export class DbService {
     return { data, error };
   }
 
-  async saveJob(job: any) {
-    return await supabase.from('jobs').upsert(job);
+  async getJobs(limit: number = 100) {
+    const { data, error } = await supabase
+      .from('jobs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) console.error('Error fetching jobs:', error);
+    return data;
   }
 
   async getApplications(userId: string) {
-    return await supabase
+    const { data, error } = await supabase
       .from('applications')
       .select('*, job:jobs(*)')
-      .eq('userId', userId);
+      .eq('userId', userId)
+      .order('appliedAt', { ascending: false });
+
+    if (error) console.error('Error fetching applications:', error);
+    return data;
+  }
+
+  async saveJob(job: any) {
+    return await supabase.from('jobs').upsert(job);
   }
 }
 
