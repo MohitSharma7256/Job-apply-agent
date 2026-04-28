@@ -2,9 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Job, UserProfile, ApplicationRecord, Platform } from "@/types";
-import { GlassCard } from "@/components/ui/GlassCard";
-import { JobDetailView } from "@/components/JobDetailView";
-import { ApplyProgress } from "@/components/ApplyProgress";
+import { GlassCard, JobDetailView, ApplyProgress } from "@/components";
 import { 
   Search, 
   User, 
