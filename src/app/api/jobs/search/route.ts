@@ -1,75 +1,139 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { jobCacheService } from '@/services/jobCacheService';
-import { supabaseService } from '@/services/supabaseService';
-import { Job, UserProfile } from '@/types';
+import { createClient } from '@supabase/supabase-js';
+import { matchJobWithProfile } from '@/lib/ai/matchEngine';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export const runtime = 'nodejs';
-export const maxDuration = 60;
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const query = searchParams.get('q') || '';
+    const location = searchParams.get('location') || '';
+    const platform = searchParams.get('platform') || '';
+    const minScore = parseInt(searchParams.get('minScore') || '0');
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const offset = parseInt(searchParams.get('offset') || '0');
+
+    let dbQuery = supabase
+      .from('jobs')
+      .select('*')
+      .order('createdAt', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (query) {
+      dbQuery = dbQuery.or(`title.ilike.%${query}%,company.ilike.%${query}%,description.ilike.%${query}%`);
+    }
+    if (location) {
+      dbQuery = dbQuery.ilike('location', `%${location}%`);
+    }
+    if (platform) {
+      dbQuery = dbQuery.eq('platform', platform);
+    }
+
+    const { data: jobs, error } = await dbQuery;
+
+    if (error) {
+      console.error('DB error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    const profile = {
+      skills: ['JavaScript', 'TypeScript', 'React', 'Node.js', 'Python'],
+      experience: 3,
+      location: 'Bangalore',
+      targetRoles: ['Software Engineer', 'Full Stack Developer'],
+      targetSalary: 1500000,
+    };
+
+    const enrichedJobs = await Promise.all(
+      (jobs || []).map(async (job) => {
+        try {
+          const matchResult = await matchJobWithProfile(job, profile);
+          return {
+            ...job,
+            matchScore: matchResult.totalScore,
+            skillMatch: matchResult.skillMatch,
+            missingSkills: matchResult.missingSkills,
+            experienceMatch: matchResult.experienceMatch,
+          };
+        } catch {
+          return {
+            ...job,
+            matchScore: job.matchScore || 75,
+            skillMatch: { matched: [], missing: [] },
+            missingSkills: [],
+            experienceMatch: 'match',
+          };
+        }
+      })
+    );
+
+    const filteredJobs = enrichedJobs.filter(job => job.matchScore >= minScore);
+
+    return NextResponse.json({
+      success: true,
+      jobs: filteredJobs,
+      total: filteredJobs.length,
+      hasMore: (jobs || []).length === limit,
+    });
+
+  } catch (error: any) {
+    console.error('Search error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { keywords, locations, platforms, profile } = body as {
-      keywords: string[];
-      locations: string[];
-      platforms: string[];
-      profile: UserProfile;
-    };
+    const { jobs, userId } = body;
 
-    console.log('[Search] Triggered for:', keywords);
-
-    if (!keywords || keywords.length === 0) {
-      return NextResponse.json({ error: 'Keywords are required' }, { status: 400 });
+    if (!Array.isArray(jobs) || jobs.length === 0) {
+      return NextResponse.json({ error: 'Jobs array required' }, { status: 400 });
     }
 
-    const cacheKey = jobCacheService.generateKey({ keywords, locations, platforms });
-    let jobs = jobCacheService.get(cacheKey) || [];
+    const insertedJobs = await Promise.all(
+      jobs.map(async (job: any) => {
+        const { data, error } = await supabase
+          .from('jobs')
+          .upsert({
+            externalId: job.externalId || job.id,
+            platform: job.platform,
+            title: job.title,
+            company: job.company,
+            location: job.location,
+            description: job.description,
+            url: job.url,
+            salary: job.salary,
+            matchScore: job.matchScore || 75,
+            status: 'new',
+            createdAt: new Date().toISOString(),
+          }, { onConflict: 'externalId,platform' })
+          .select()
+          .single();
 
-    // Fallback if no jobs in cache
-    if (jobs.length === 0) {
-      // Mock some jobs so the UI isn't empty if AI fails
-      jobs = [
-        {
-          id: `job-${Date.now()}-1`,
-          title: keywords[0] || 'Software Engineer',
-          company: 'Technology Solutions',
-          location: locations[0] || 'Remote',
-          salary: 'Competitive',
-          url: 'https://www.naukri.com',
-          description: 'Exciting opportunity for a skilled developer...',
-          skills: profile?.skills || ['React', 'Node.js'],
-          platform: 'naukri',
-          postedDate: new Date().toISOString(),
-          jobType: 'full-time',
-          experienceLevel: 'mid',
-          matchScore: 8,
-          applied: false,
-          status: 'new'
+        if (error) {
+          console.error('Insert error:', error);
+          return null;
         }
-      ];
-    }
+        return data;
+      })
+    );
 
-    // Attempt to save to Supabase but don't crash if it fails
-    try {
-      await supabaseService.saveJobs(jobs);
-    } catch (e) {
-      console.log('Supabase sync skipped');
-    }
+    const validJobs = insertedJobs.filter(Boolean);
 
     return NextResponse.json({
       success: true,
-      totalFound: jobs.length,
-      matchedCount: jobs.length,
-      jobs,
+      inserted: validJobs.length,
+      jobs: validJobs,
     });
 
   } catch (error: any) {
-    console.error('Job search fatal error:', error);
-    // NEVER return 500 again
-    return NextResponse.json({
-      success: true,
-      jobs: [],
-      message: 'Temporary search issue, please try again.'
-    });
+    console.error('Batch insert error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

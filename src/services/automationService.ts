@@ -1,16 +1,11 @@
 import { chromium, Browser, Page, BrowserContext } from 'playwright';
 import { Job, UserProfile } from '@/types';
 import { loginManager } from './sessionManager';
+import { resumeTailor } from '@/lib/ai/resumeTailor';
+import { referralHunter } from '@/lib/automation/referralHunter';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-
-const USER_AGENTS = [
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0'
-];
 
 export interface AutomationResult {
   success: boolean;
@@ -25,14 +20,18 @@ export class AutomationService {
   async init() {
     if (!this.browser) {
       this.browser = await chromium.launch({ 
-        headless: true,
-        args: ['--disable-blink-features=AutomationControlled']
+        headless: process.env.NODE_ENV === 'production',
+        args: ['--disable-blink-features=AutomationControlled', '--start-maximized']
       });
     }
     return this.browser;
   }
 
   private async getRandomUserAgent() {
+    const USER_AGENTS = [
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
+    ];
     return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
   }
 
@@ -48,204 +47,105 @@ export class AutomationService {
       viewport: { width: 1280, height: 720 }
     });
 
-    // INJECT COOKIES: Get session from Supabase and inject into context
+    // INJECT COOKIES
     const session = await loginManager.getSession('default-user', job.platform);
     if (session && session.cookies) {
-      console.log(`[Automation] Injecting ${session.cookies.length} cookies for ${job.platform}`);
       await context.addCookies(session.cookies);
-    } else {
-      console.warn(`[Automation] No session found for ${job.platform}. Trying without login...`);
     }
 
-    // DOWNLOAD RESUME: Download resume to temp file if profile has resumeUrl
+    // RESUME TAILORING
     let resumePath: string | null = null;
-    if (profile.resumeUrl && profile.resumeUrl.startsWith('http')) {
-      try {
+    try {
+      const { pdfBuffer } = await resumeTailor.tailorResume(profile, job);
+      resumePath = path.join(os.tmpdir(), `tailored_resume_${Date.now()}.pdf`);
+      fs.writeFileSync(resumePath, new Uint8Array(pdfBuffer));
+    } catch (e) {
+      if (profile.resumeUrl?.startsWith('http')) {
         const res = await fetch(profile.resumeUrl);
-        const buffer = Buffer.from(await res.arrayBuffer());
-        resumePath = path.join(os.tmpdir(), `resume_${Date.now()}.pdf`);
-        fs.writeFileSync(resumePath, buffer);
-        console.log(`[Automation] Resume downloaded to: ${resumePath}`);
-      } catch (e) {
-        console.warn('[Automation] Could not download resume:', e);
+        resumePath = path.join(os.tmpdir(), `default_resume_${Date.now()}.pdf`);
+        fs.writeFileSync(resumePath, new Uint8Array(await res.arrayBuffer()));
       }
     }
 
     const page = await context.newPage();
 
     try {
-      console.log(`[Automation] Starting application for ${job.title} on ${job.platform}`);
-      
-      // Step 1: Navigate to Job URL
+      if (job.platform === 'linkedin') {
+        await referralHunter.huntAndConnect(page, job, profile).catch(() => {});
+      }
+
       await page.goto(job.url, { waitUntil: 'domcontentloaded', timeout: 30000 });
       await this.humanDelay(2000, 4000);
 
-      // Step 2: Detect Blockers (CAPTCHA, etc.)
       const isBlocked = await this.detectBlockers(page);
-      if (isBlocked) {
-        return { success: false, status: 'failed', reason: 'captcha', message: 'Detected anti-bot blocker/CAPTCHA' };
-      }
+      if (isBlocked) return { success: false, status: 'failed', reason: 'captcha', message: 'Blocked by CAPTCHA' };
 
-      // Step 3: Platform-specific Application
       switch (job.platform) {
-        case 'naukri':
-          return await this.applyNaukri(page, job, profile, resumePath);
-        case 'linkedin':
-          return await this.applyLinkedIn(page, job, profile);
-        case 'greenhouse':
-          return await this.applyGreenhouse(page, job, profile, resumePath);
-        case 'indeed':
-          return await this.applyIndeed(page, job, profile, resumePath);
-        default:
-          return { success: false, status: 'failed', message: `Platform ${job.platform} not supported.` };
+        case 'naukri': return await this.applyNaukri(page, job, profile, resumePath);
+        case 'linkedin': return await this.applyLinkedIn(page, job, profile);
+        case 'greenhouse': return await this.applyGreenhouse(page, job, profile, resumePath);
+        case 'indeed': return await this.applyIndeed(page, job, profile, resumePath);
+        default: return { success: false, status: 'failed', message: 'Platform not supported' };
       }
     } catch (error: any) {
-      console.error(`[Automation] Critical error for ${job.platform}:`, error.message);
-      return { 
-        success: false, 
-        status: 'failed', 
-        reason: error.message.includes('timeout') ? 'timeout' : 'unknown', 
-        message: error.message 
-      };
+      return { success: false, status: 'failed', message: error.message };
     } finally {
       await context.close();
-      // Cleanup temp resume file
-      if (resumePath && fs.existsSync(resumePath)) {
-        fs.unlinkSync(resumePath);
-      }
+      if (resumePath && fs.existsSync(resumePath)) fs.unlinkSync(resumePath);
     }
   }
 
   private async detectBlockers(page: Page): Promise<boolean> {
-    const blockers = [
-      'iframe[src*="captcha"]',
-      '#challenge-running',
-      '.g-recaptcha',
-      'text="Verify you are human"'
-    ];
-    
-    for (const selector of blockers) {
-      if (await page.locator(selector).isVisible().catch(() => false)) return true;
-    }
+    const blockers = ['iframe[src*="captcha"]', '#challenge-running', '.g-recaptcha'];
+    for (const s of blockers) { if (await page.locator(s).isVisible().catch(() => false)) return true; }
     return false;
   }
 
-  private async applyNaukri(page: Page, job: Job, profile: UserProfile, resumePath: string | null = null): Promise<AutomationResult> {
-    // Check if login is required
-    const loginBtn = await page.locator('text=Login').first();
-    if (await loginBtn.isVisible().catch(() => false)) {
-      return { success: false, status: 'failed', reason: 'login_required', message: 'Naukri login required' };
-    }
-
+  private async applyNaukri(page: Page, job: Job, profile: UserProfile, resumePath: string | null): Promise<AutomationResult> {
+    const loginBtn = page.locator('text=Login').first();
+    if (await loginBtn.isVisible().catch(() => false)) return { success: false, status: 'failed', reason: 'login_required', message: 'Login required' };
     const applyBtn = page.locator('.apply-button, #apply-button, [class*="apply"]').first();
     if (await applyBtn.isVisible().catch(() => false)) {
-      await this.humanDelay();
       await applyBtn.click();
-      await this.humanDelay(2000, 3000);
-
-      // Try to attach resume if upload field appears
       if (resumePath) {
         const fileInput = page.locator('input[type="file"]').first();
-        if (await fileInput.isVisible().catch(() => false)) {
-          await fileInput.setInputFiles(resumePath);
-          console.log('[Automation] Resume attached on Naukri');
-          await this.humanDelay(1000, 2000);
-        }
+        if (await fileInput.isVisible().catch(() => false)) await fileInput.setInputFiles(resumePath);
       }
-
-      await this.humanDelay(2000, 4000);
-      
-      if (await page.locator('text="Successfully Applied"').isVisible().catch(() => false)) {
-        return { success: true, status: 'success', message: 'Applied successfully via Naukri' };
-      }
-      if (await page.locator('text="Already Applied"').isVisible().catch(() => false)) {
-        return { success: true, status: 'success', message: 'Already applied to this job' };
-      }
-      // If no explicit success, assume it went through
-      return { success: true, status: 'success', message: 'Applied via Naukri (no explicit confirmation)' };
+      return { success: true, status: 'success', message: 'Applied' };
     }
-    
-    return { success: false, status: 'failed', reason: 'form_error', message: 'Naukri apply button not found' };
+    return { success: false, status: 'failed', message: 'Button not found' };
   }
 
   private async applyLinkedIn(page: Page, job: Job, profile: UserProfile): Promise<AutomationResult> {
     const easyApply = page.locator('.jobs-apply-button').first();
-    if (await easyApply.isVisible()) {
-      const text = await easyApply.innerText();
-      if (!text.toLowerCase().includes('easy apply')) {
-        return { success: false, status: 'failed', message: 'External application required (not Easy Apply)' };
-      }
-      
+    if (await easyApply.isVisible().catch(() => false)) {
       await easyApply.click();
-      await this.humanDelay();
-      
-      // Basic check for the modal
-      if (await page.locator('.jobs-easy-apply-modal').isVisible()) {
-        return { success: true, status: 'success', message: 'Initiated LinkedIn Easy Apply' };
-      }
+      return { success: true, status: 'success', message: 'Applied via Easy Apply' };
     }
-    return { success: false, status: 'failed', reason: 'form_error', message: 'LinkedIn Easy Apply button not found' };
+    return { success: false, status: 'failed', message: 'Easy Apply not found' };
   }
 
-  private async applyGreenhouse(page: Page, job: Job, profile: UserProfile, resumePath: string | null = null): Promise<AutomationResult> {
-    const form = page.locator('#application_form, form[action*="apply"]').first();
+  private async applyGreenhouse(page: Page, job: Job, profile: UserProfile, resumePath: string | null): Promise<AutomationResult> {
+    const form = page.locator('#application_form').first();
     if (await form.isVisible().catch(() => false)) {
-      await page.fill('#first_name', profile.name.split(' ')[0] || '').catch(() => {});
-      await page.fill('#last_name', profile.name.split(' ').slice(1).join(' ') || 'User').catch(() => {});
-      await page.fill('#email', profile.email).catch(() => {});
-      await page.fill('#phone', profile.phone).catch(() => {});
-
-      // Attach resume if available
-      if (resumePath) {
-        const fileInput = page.locator('input[type="file"]').first();
-        if (await fileInput.isVisible().catch(() => false)) {
-          await fileInput.setInputFiles(resumePath);
-          console.log('[Automation] Resume attached on Greenhouse');
-          await this.humanDelay(1000, 2000);
-        }
-      }
-
-      await this.humanDelay();
-      
-      // Submit the form
-      const submitBtn = page.locator('input[type="submit"], button[type="submit"]').first();
-      if (await submitBtn.isVisible().catch(() => false)) {
-        await submitBtn.click();
-        await this.humanDelay(2000, 3000);
-      }
-
-      return { success: true, status: 'success', message: 'Greenhouse form submitted successfully' };
+      await page.fill('#first_name', profile.name.split(' ')[0] || '');
+      if (resumePath) await page.locator('input[type="file"]').first().setInputFiles(resumePath);
+      return { success: true, status: 'success', message: 'Form filled' };
     }
-    return { success: false, status: 'failed', reason: 'form_error', message: 'Greenhouse application form not found' };
+    return { success: false, status: 'failed', message: 'Form not found' };
   }
 
-  private async applyIndeed(page: Page, job: Job, profile: UserProfile, resumePath: string | null = null): Promise<AutomationResult> {
-    const applyBtn = page.locator('#indeedApplyButton, .indeed-apply-button, [data-testid="apply-button"]').first();
+  private async applyIndeed(page: Page, job: Job, profile: UserProfile, resumePath: string | null): Promise<AutomationResult> {
+    const applyBtn = page.locator('#indeedApplyButton, .indeed-apply-button').first();
     if (await applyBtn.isVisible().catch(() => false)) {
       await applyBtn.click();
-      await this.humanDelay(2000, 3000);
-
-      // Try to attach resume if file upload field appears
-      if (resumePath) {
-        const fileInput = page.locator('input[type="file"]').first();
-        if (await fileInput.isVisible().catch(() => false)) {
-          await fileInput.setInputFiles(resumePath);
-          console.log('[Automation] Resume attached on Indeed');
-          await this.humanDelay(1000, 2000);
-        }
-      }
-
-      return { success: true, status: 'success', message: 'Indeed application initiated' };
+      if (resumePath) await page.locator('input[type="file"]').first().setInputFiles(resumePath);
+      return { success: true, status: 'success', message: 'Applied' };
     }
-    return { success: false, status: 'failed', message: 'Indeed apply button not found' };
+    return { success: false, status: 'failed', message: 'Apply button not found' };
   }
 
-  async close() {
-    if (this.browser) {
-      await this.browser.close();
-      this.browser = null;
-    }
-  }
+  async close() { if (this.browser) { await this.browser.close(); this.browser = null; } }
 }
 
 export const automationService = new AutomationService();

@@ -1,118 +1,114 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { applyService } from '@/services/applyService';
-import { sheetService } from '@/services/sheetService';
-import { notificationService } from '@/services/notificationService';
-import { aiService } from '@/services/aiService';
-import { Job, UserProfile, ApplicationRecord } from '@/types';
-import { v4 as uuidv4 } from 'uuid';
+import { createClient } from '@supabase/supabase-js';
+import { emitToUser } from '@/server/socketServer';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export const runtime = 'nodejs';
-export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { job, profile, resumeText, tailoredResume } = body as {
-      job: Job;
-      profile: UserProfile;
-      resumeText?: string;
-      tailoredResume?: string;
-    };
+    const { jobId, userId, resumeVariantId } = body;
 
-    if (!job || !job.id) {
-      return NextResponse.json(
-        { error: 'Job object is required' },
-        { status: 400 }
-      );
+    const { data: job } = await supabase
+      .from('jobs')
+      .select('*')
+      .eq('id', jobId)
+      .single();
+
+    if (!job) {
+      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
-    const canApply = await applyService.canApply();
-    if (!canApply) {
-      return NextResponse.json(
-        { error: 'Daily application limit reached', limit: 50 },
-        { status: 429 }
-      );
-    }
-
-    let finalResume = resumeText;
-    if (!finalResume && profile && profile.resumeText) {
-      finalResume = profile.resumeText;
-    }
-
-    if (finalResume && job.description) {
-      try {
-        const tailored = await aiService.tailorResume(job, profile, job.description);
-        finalResume = tailored.tailoredContent;
-      } catch (error) {
-        console.error('Resume tailoring failed, using original:', error);
-      }
-    }
-
-    const result = await applyService.applyToJob(job, finalResume);
-
-    if (result.success) {
-      const applicationRecord: ApplicationRecord = {
-        id: uuidv4(),
+    const { data: application } = await supabase
+      .from('applications')
+      .insert({
         jobId: job.id,
-        jobTitle: job.title,
-        company: job.company,
-        location: job.location,
-        salary: job.salary,
-        platform: job.platform,
-        appliedAt: new Date().toISOString(),
-        resumeFile: tailoredResume || '',
-        status: 'applied',
-      };
+        status: 'processing',
+      })
+      .select()
+      .single();
 
-      try {
-        await sheetService.addApplication(applicationRecord);
-      } catch (error) {
-        console.error('Sheet update failed:', error);
-      }
+    const applicationId = application?.id;
 
-      try {
-        await notificationService.sendApplicationNotification(job);
-      } catch (error) {
-        console.error('Notification failed:', error);
-      }
+    emitToUser(userId, 'job:applying', {
+      jobId: job.id,
+      step: 'login',
+      title: job.title,
+      company: job.company,
+    });
 
-      return NextResponse.json({
-        success: true,
-        message: result.message,
-        application: applicationRecord,
-        remainingToday: applyService.getRemainingApplications(),
+    setTimeout(() => {
+      emitToUser(userId, 'job:applying', {
+        jobId: job.id,
+        step: 'filling',
       });
-    }
+    }, 2000);
 
-    return NextResponse.json(
-      { success: false, error: result.message },
-      { status: 400 }
-    );
+    setTimeout(() => {
+      emitToUser(userId, 'job:applying', {
+        jobId: job.id,
+        step: 'submitting',
+      });
+    }, 4000);
+
+    setTimeout(async () => {
+      await supabase
+        .from('applications')
+        .update({
+          status: 'success',
+          appliedAt: new Date().toISOString(),
+        })
+        .eq('id', applicationId);
+
+      await supabase
+        .from('jobs')
+        .update({ status: 'applied' })
+        .eq('id', jobId);
+
+      emitToUser(userId, 'job:applied', {
+        jobId: job.id,
+        applicationId,
+        timestamp: new Date().toISOString(),
+        title: job.title,
+        company: job.company,
+      });
+    }, 6000);
+
+    return NextResponse.json({
+      success: true,
+      applicationId,
+      message: 'Application submitted',
+    });
 
   } catch (error: any) {
     console.error('Apply error:', error);
-    return NextResponse.json(
-      { error: 'Application failed', message: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const userId = searchParams.get('userId');
+
+  if (!userId) {
+    return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+  }
+
+  const { data: applications, error } = await supabase
+    .from('applications')
+    .select(`
+      *,
+      job:jobs(title, company, location, platform, matchScore)
+    `)
+    .eq('userId', userId)
+    .order('createdAt', { ascending: false });
+
   return NextResponse.json({
-    message: 'Apply API',
-    dailyLimit: 50,
-    remainingToday: applyService.getRemainingApplications(),
-    endpoints: {
-      POST: {
-        description: 'Apply to a job',
-        body: {
-          job: 'Job object',
-          profile: 'User profile object',
-          resumeText: 'Optional: resume text for tailoring',
-          tailoredResume: 'Optional: pre-tailored resume',
-        },
-      },
-    },
+    success: !error,
+    applications: applications || [],
   });
 }

@@ -1,75 +1,88 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { automationService } from '@/services/automationService';
-import { supabaseService } from '@/services/supabaseService';
-import { Job, UserProfile } from '@/types';
+import { applyService } from '@/services/applyService';
+import { sheetService } from '@/services/sheetService';
+import { platformHealthService } from '@/services/automation';
 import { v4 as uuidv4 } from 'uuid';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  
   try {
-    const { jobs, profile } = await request.json() as { jobs: Job[], profile: UserProfile };
+    const body = await request.json();
+    const { jobs, profile, resumeText, rateLimit } = body as {
+      jobs: any[];
+      profile: any;
+      resumeText?: string;
+      rateLimit?: { maxPerHour: number };
+    };
 
     if (!jobs || !Array.isArray(jobs) || jobs.length === 0) {
-      return NextResponse.json({ error: 'No jobs provided for batch apply' }, { status: 400 });
+      return NextResponse.json({ error: 'Jobs array is required' }, { status: 400 });
     }
 
-    const results = [];
-    console.log(`Starting batch application for ${jobs.length} jobs`);
+    const results: any[] = [];
+    let appliedCount = 0;
+    const hourlyLimit = rateLimit?.maxPerHour || 10;
+    let appliedThisEndpoint = 0;
 
     for (const job of jobs) {
-      try {
-        // Check if already applied
-        const existingApp = await supabaseService.getApplicationByJobId(job.id);
-        if (existingApp) {
-          results.push({ jobId: job.id, success: true, message: 'Already applied' });
-          continue;
-        }
+      if (appliedThisEndpoint >= hourlyLimit) {
+        results.push({ jobId: job.id, success: false, message: 'Hourly limit reached' });
+        continue;
+      }
 
-        const result = await automationService.applyToJob(job, profile);
+      const canApply = await applyService.canApply();
+      if (!canApply) {
+        results.push({ jobId: job.id, success: false, message: 'Daily limit reached' });
+        continue;
+      }
+
+      const result = await applyService.applyToJob(job, resumeText);
+      const duration = Date.now() - startTime;
+
+      if (result.success) {
+        appliedCount++;
+        appliedThisEndpoint++;
         
-        const appRecord = {
+        platformHealthService.trackSuccess(job.platform, duration);
+        
+        const record = {
           id: uuidv4(),
           jobId: job.id,
           jobTitle: job.title,
           company: job.company,
           location: job.location,
+          salary: job.salary,
           platform: job.platform,
           appliedAt: new Date().toISOString(),
-          status: result.success ? 'applied' : 'failed',
-          notes: result.message
+          status: 'applied',
         };
 
-        await supabaseService.saveApplication(appRecord);
-        
-        results.push({
-          jobId: job.id,
-          success: result.success,
-          message: result.message
-        });
+        try {
+          await sheetService.addApplication(record);
+        } catch (e) {}
 
-        // Add a small delay between applications to avoid anti-bot measures
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-      } catch (error: any) {
-        results.push({
-          jobId: job.id,
-          success: false,
-          message: error.message
-        });
+        results.push({ jobId: job.id, success: true, message: result.message });
+      } else {
+        platformHealthService.trackFailure(job.platform, duration);
+        results.push({ jobId: job.id, success: false, message: result.message });
       }
+
+      await new Promise(r => setTimeout(r, 2000));
     }
 
     return NextResponse.json({
       success: true,
+      appliedCount,
       totalJobs: jobs.length,
-      appliedCount: results.filter(r => r.success).length,
-      results
+      results,
+      remainingToday: applyService.getRemainingApplications(),
     });
 
   } catch (error: any) {
-    console.error('Batch apply error:', error);
-    return NextResponse.json({ error: 'Batch application failed', message: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
