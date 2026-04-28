@@ -1,6 +1,6 @@
-import { Job, UserProfile } from '@/types';
+import { Job, UserProfile } from '../types';
 
-export class CoverLetterService {
+export class aiLetterService {
   async generateCoverLetter(job: Job, profile: UserProfile): Promise<string> {
     const name = profile.name || 'Candidate';
     const title = job.title || 'Position';
@@ -21,4 +21,4 @@ ${name}
   }
 }
 
-export const coverLetterService = new CoverLetterService();
+export const aiLetterService = new aiLetterService();

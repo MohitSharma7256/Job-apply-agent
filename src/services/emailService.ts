@@ -1,5 +1,5 @@
 import { google } from 'googleapis';
-import { supabase } from './supabaseService';
+import { supabase } from './dbService';
 import OpenAI from 'openai';
 
 let openai: OpenAI | null = null;

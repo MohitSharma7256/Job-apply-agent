@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '../../../services/dbService';
 
 export const runtime = 'nodejs';
 
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     const redisStart = Date.now();
     try {
-      const redis = (await import('@/lib/redis')).getRedis();
+      const redis = (await import('../../../lib/redis')).getRedis();
       await redis.ping();
       checks.redis = {
         status: 'healthy',

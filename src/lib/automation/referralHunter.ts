@@ -1,6 +1,6 @@
 import { Page } from 'playwright';
 import OpenAI from 'openai';
-import { Job, UserProfile } from '@/types';
+import { Job, UserProfile } from '../../types';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,

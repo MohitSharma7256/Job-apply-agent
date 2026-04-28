@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Job, UserProfile, ApplicationRecord, Platform } from "@/types";
-import { GlassCard, JobDetailView, ApplyProgress } from "@/components";
+import { Job, UserProfile, ApplicationRecord, Platform } from "../../types";
+import { GlassCard } from "../../components/ui/GlassCard";
+import { ActivityFeed } from "../../components/ActivityFeed";
+import { PlatformGrid } from "../../components/PlatformGrid";
 import { 
   Search, 
   User, 
@@ -24,7 +26,7 @@ import {
   Trash2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn, getPlatformIcon, getStatusColor } from "@/utils";
+import { cn, getPlatformIcon, getStatusColor } from "../../utils/helpers";
 
 const PLATFORMS: { id: Platform; name: string; icon: string }[] = [
   { id: "naukri", name: "Naukri.com", icon: "📋" },

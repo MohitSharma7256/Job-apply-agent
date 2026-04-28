@@ -1,4 +1,4 @@
-import { Job } from '@/types';
+import { Job } from '../types';
 
 interface CacheEntry {
   data: Job[];

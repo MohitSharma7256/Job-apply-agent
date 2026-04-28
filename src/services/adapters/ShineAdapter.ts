@@ -1,6 +1,6 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import { Job, JobSearchParams } from '@/types';
+import { Job, JobSearchParams } from '../../types';
 import { JobSearchAdapter } from './JobSearchAdapter';
 
 export class ShineAdapter extends JobSearchAdapter {

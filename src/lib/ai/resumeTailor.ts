@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { Job, UserProfile } from '@/types';
+import { Job, UserProfile } from '../../types';
 import { jsPDF } from 'jspdf';
 
 let openai: OpenAI | null = null;

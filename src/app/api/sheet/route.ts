@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sheetService } from '@/services/sheetService';
-import { ApplicationRecord } from '@/types';
+import { sheetService } from '../../../services/sheetService';
+import { ApplicationRecord } from '../../../	ypes';
 
 export const runtime = 'nodejs';
 
