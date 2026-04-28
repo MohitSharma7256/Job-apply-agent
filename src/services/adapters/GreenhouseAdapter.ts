@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Job, JobSearchParams } from '../../types';
 import { JobSearchAdapter } from './JobSearchAdapter';
-import { GREENHOUSE_COMPANIES } from '../..//platforms';
+import { GREENHOUSE_COMPANIES } from '../../../lib/automation/platforms';
 
 export class GreenhouseAdapter extends JobSearchAdapter {
   platformName = 'greenhouse';
