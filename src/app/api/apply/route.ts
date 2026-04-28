@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../services/supabaseService';
-import { emitToUser } from '@/server/socketServer';
+import { emitToUser } from '../../../server/socketServer';
 
 export const runtime = 'nodejs';
 

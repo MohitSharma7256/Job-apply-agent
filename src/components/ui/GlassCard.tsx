@@ -1,38 +1,23 @@
 import React from 'react';
-import { cn } from '@/utils';
-import { motion, HTMLMotionProps } from 'framer-motion';
+import { cn } from '../../utils/helpers';
 
-interface GlassCardProps extends HTMLMotionProps<'div'> {
+interface GlassCardProps {
   children: React.ReactNode;
   className?: string;
-  gradient?: boolean;
+  onClick?: () => void;
 }
 
-export const GlassCard: React.FC<GlassCardProps> = ({ 
-  children, 
-  className, 
-  gradient = false,
-  ...props 
-}) => {
+export const GlassCard: React.FC<GlassCardProps> = ({ children, className, onClick }) => {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
+    <div 
+      onClick={onClick}
       className={cn(
-        "relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl transition-all duration-300 hover:border-white/20",
-        gradient && "bg-gradient-to-br from-white/10 to-transparent",
+        "bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden transition-all duration-300",
+        onClick && "hover:bg-white/[0.05] cursor-pointer hover:border-white/20 active:scale-[0.98]",
         className
       )}
-      {...props}
     >
-      {/* Subtle Inner Glow */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-50" />
-      
-      {/* Content */}
-      <div className="relative z-10">
-        {children}
-      </div>
-    </motion.div>
+      {children}
+    </div>
   );
 };

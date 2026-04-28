@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     const redisStart = Date.now();
     try {
-      const redis = (await import('@/lib/redis')).getRedis();
+      const redis = (await import('../../../lib/redis')).getRedis();
       await redis.ping();
       checks.redis = {
         status: 'healthy',
