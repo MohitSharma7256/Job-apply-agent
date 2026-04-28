@@ -2,11 +2,12 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "module": "CommonJS",
-    "outDir": "dist-server",
+    "outDir": "dist",
     "noEmit": false,
     "esModuleInterop": true,
     "allowJs": true,
     "skipLibCheck": true,
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
