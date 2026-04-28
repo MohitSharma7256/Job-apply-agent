@@ -1,4 +1,4 @@
-import { supabase } from '../../../services/supabaseService';
+import { supabase } from '../../services/supabaseService';
 
 export interface CompanyProfile {
   name: string;

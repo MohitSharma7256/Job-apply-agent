@@ -1,7 +1,7 @@
 import { Server as HTTPServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
-import { supabase } from '../../../services/supabaseService';
+import { supabase } from '../services/supabaseService';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change';
 const SOCKET_PORT = process.env.SOCKET_PORT || 3001;
