@@ -1,10 +1,10 @@
-export { supabase } from '../../../services/supabaseService';
+export { supabase } from '../../../services/dbService';
 import { Job, UserProfile, ApplicationRecord } from '../types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-export class SupabaseService {
+export class dbService {
   async saveJobs(jobs: Job[]) {
     if (!supabaseUrl || !supabaseKey) return null; // Skip if not configured
     try {
@@ -107,4 +107,4 @@ export class SupabaseService {
   }
 }
 
-export const supabaseService = new SupabaseService();
+export const dbService = new dbService();

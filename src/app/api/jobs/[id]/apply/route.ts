@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../services/supabaseService';
-import { coverLetterService } from '../../../../services/coverLetterService';
+import { supabase } from '../../../../services/dbService';
+import { aiLetterService } from '../../../../services/aiLetterService';
 
 export const runtime = 'nodejs';
 
@@ -26,7 +26,7 @@ export async function POST(
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
-    const coverLetter = await coverLetterService.generateCoverLetter(profile, job);
+    const coverLetter = await aiLetterService.generateCoverLetter(profile, job);
 
     return NextResponse.json({ 
       success: true, 

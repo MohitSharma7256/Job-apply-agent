@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../services/supabaseService';
+import { supabase } from '../../../../services/dbService';
 import { matchEngine } from '../../../../lib/ai/matchEngine';
 
 export const runtime = 'nodejs';

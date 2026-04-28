@@ -1,4 +1,4 @@
-import { supabase } from '../../../services/supabaseService';
+import { supabase } from '../../../services/dbService';
 import { encrypt, decrypt } from '../..//encryption';
 
 export interface SessionData {
