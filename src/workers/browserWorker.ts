@@ -2,7 +2,7 @@ import { Worker } from 'bullmq';
 import { connection } from '../lib/queue/jobQueue';
 import { automationService } from '../services/automationService';
 import { Job, UserProfile } from '../types';
-import { supabase } from '../services/supabaseService';
+import { supabase } from '../lib/supabaseClient';
 
 export const startBrowserWorker = (io: any) => {
   const worker = new Worker('job-applications', async (bullJob) => {
