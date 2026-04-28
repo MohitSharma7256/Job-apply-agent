@@ -6,8 +6,10 @@ const IV_LENGTH = 16;
 
 export function encrypt(text: string): string {
   const iv = crypto.randomBytes(IV_LENGTH);
+  // @ts-ignore
   const cipher = crypto.createCipheriv(ALGORITHM, Buffer.from(SECRET_KEY), iv);
-  const encrypted = Buffer.concat([cipher.update(text) as any, cipher.final() as any]);
+  // @ts-ignore
+  const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
   return iv.toString('hex') + ':' + encrypted.toString('hex');
 }
 
@@ -18,7 +20,9 @@ export function decrypt(text: string): string {
   
   const iv = Buffer.from(ivStr, 'hex');
   const encryptedText = Buffer.from(textParts.join(':'), 'hex');
+  // @ts-ignore
   const decipher = crypto.createDecipheriv(ALGORITHM, Buffer.from(SECRET_KEY), iv);
-  const decrypted = Buffer.concat([decipher.update(encryptedText) as any, decipher.final() as any]);
+  // @ts-ignore
+  const decrypted = Buffer.concat([decipher.update(encryptedText), decipher.final()]);
   return decrypted.toString();
 }
