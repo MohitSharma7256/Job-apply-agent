@@ -1,9 +1,13 @@
 import OpenAI from 'openai';
 import { Job, UserProfile } from '@/types';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let openai: OpenAI | null = null;
+const getOpenAI = () => {
+  if (!openai) {
+    openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || 'missing' });
+  }
+  return openai;
+};
 
 export class CoverLetterGenerator {
   async generateVariants(profile: UserProfile, job: Job, companyContext: string = '') {
@@ -33,7 +37,8 @@ export class CoverLetterGenerator {
     `;
 
     try {
-      const response = await openai.chat.completions.create({
+      const ai = getOpenAI();
+      const response = await ai.chat.completions.create({
         model: 'gpt-4o',
         messages: [{ role: 'system', content: 'You are a professional career consultant.' }, { role: 'user', content: prompt }],
         response_format: { type: 'json_object' },
