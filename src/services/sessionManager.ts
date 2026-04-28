@@ -1,10 +1,5 @@
-<<<<<<< HEAD
 import { supabase } from './dbService';
 import { encrypt, decrypt } from '../lib/encryption';
-=======
-import { supabase } from '@/lib/supabaseClient';
-import { encrypt, decrypt } from '@/lib/encryption';
->>>>>>> 481e67f124cff80e7d69b8d4b907e3c632da42d2
 
 export interface SessionData {
   cookies: any[];
