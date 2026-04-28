@@ -1,14 +1,8 @@
 import { Worker } from 'bullmq';
-<<<<<<< HEAD
 import { Server } from 'socket.io';
 import { supabase } from '../services/dbService';
 import { automationService } from '../services/automationService';
-=======
-import { connection } from '../lib/queue/jobQueue';
-import { automationService } from '../services/automationService';
 import { Job, UserProfile } from '../types';
-import { supabase } from '../lib/supabaseClient';
->>>>>>> 481e67f124cff80e7d69b8d4b907e3c632da42d2
 
 export const startBrowserWorker = (io: Server) => {
   const worker = new Worker('browser-queue', async (job) => {
