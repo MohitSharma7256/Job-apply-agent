@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/services/supabaseService';
+import { supabase } from '../../../../services/supabaseService';
 import { encryptSession, decryptSession } from '@/lib/sessions/sessionManager';
 
 export const runtime = 'nodejs';
