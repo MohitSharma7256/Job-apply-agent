@@ -8,7 +8,10 @@ export const maxDuration = 60;
 
 async function searchJobsWithGemini(keywords: string[], locations: string[], platforms: string[]): Promise<Job[]> {
   const apiKey = process.env.GOOGLE_AI_API_KEY || '';
-  if (!apiKey) throw new Error('GOOGLE_AI_API_KEY not set');
+  if (!apiKey) {
+    console.warn('GOOGLE_AI_API_KEY not set - skipping AI search');
+    return [];
+  }
 
   const prompt = `You are a job search engine with knowledge of current job markets in India and globally.
 
@@ -140,11 +143,16 @@ export async function POST(request: NextRequest) {
       jobs = cachedJobs;
     } else {
       console.log('[AI Search] Searching with Gemini AI...');
-      jobs = await searchJobsWithGemini(
-        keywords,
-        locations || ['India'],
-        platforms || ['naukri', 'linkedin', 'indeed']
-      );
+      try {
+        jobs = await searchJobsWithGemini(
+          keywords,
+          locations || ['India'],
+          platforms || ['naukri', 'linkedin', 'indeed']
+        );
+      } catch (e: any) {
+        console.error('[AI Search] Failed:', e.message);
+        jobs = [];
+      }
       console.log(`[AI Search] Found ${jobs.length} jobs`);
     }
 
