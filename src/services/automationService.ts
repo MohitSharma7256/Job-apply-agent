@@ -1,5 +1,6 @@
 import { chromium, Browser, Page, BrowserContext } from 'playwright';
 import { Job, UserProfile } from '@/types';
+import { loginManager } from './sessionManager';
 
 const USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -43,6 +44,16 @@ export class AutomationService {
       userAgent: await this.getRandomUserAgent(),
       viewport: { width: 1280, height: 720 }
     });
+
+    // INJECT COOKIES: Get session from Supabase and inject into context
+    const session = await loginManager.getSession('default-user', job.platform);
+    if (session && session.cookies) {
+      console.log(`[Automation] Injecting ${session.cookies.length} cookies for ${job.platform}`);
+      await context.addCookies(session.cookies);
+    } else {
+      console.warn(`[Automation] No session found for ${job.platform}. Trying without login...`);
+    }
+
     const page = await context.newPage();
 
     try {

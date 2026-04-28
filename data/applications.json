@@ -10,5 +10,29 @@
     "appliedAt": "2026-04-27T10:00:00Z",
     "status": "applied",
     "notes": "Demo application"
+  },
+  {
+    "id": "112e4c85-320d-4fbe-ae9f-fa2f97ca2cce",
+    "jobId": "job-1777360714160-1",
+    "jobTitle": "Full Stack Developer",
+    "company": "Technology Solutions",
+    "location": "India",
+    "salary": "Competitive",
+    "platform": "naukri",
+    "appliedAt": "2026-04-28T07:18:43.963Z",
+    "resumeFile": "",
+    "status": "applied"
+  },
+  {
+    "id": "d0244b82-bfbd-470b-a99b-93e78f56548f",
+    "jobId": "job-1777360740080-1",
+    "jobTitle": "Full Stack Developer",
+    "company": "Technology Solutions",
+    "location": "India",
+    "salary": "Competitive",
+    "platform": "naukri",
+    "appliedAt": "2026-04-28T07:19:04.880Z",
+    "resumeFile": "",
+    "status": "applied"
   }
 ]
