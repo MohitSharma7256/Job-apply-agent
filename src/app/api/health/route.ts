@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/services/supabaseService';
+import { supabase } from '../../../../services/supabaseService';
 
 export const runtime = 'nodejs';
 
