@@ -1,4 +1,4 @@
-import { Job } from '@/types';
+import { Job } from '../types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 

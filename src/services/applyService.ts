@@ -1,4 +1,4 @@
-import { Job, Platform } from '@/types';
+import { Job, Platform } from '../types';
 import { PLATFORMS, DAILY_APPLICATION_LIMIT } from '../..//platforms';
 
 interface BrowserConfig {

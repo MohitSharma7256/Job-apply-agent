@@ -1,4 +1,4 @@
-import { Job, JobSearchParams } from '@/types';
+import { Job, JobSearchParams } from '../../types';
 import crypto from 'crypto';
 
 export abstract class JobSearchAdapter {

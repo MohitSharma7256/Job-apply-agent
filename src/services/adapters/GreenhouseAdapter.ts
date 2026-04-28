@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Job, JobSearchParams } from '@/types';
+import { Job, JobSearchParams } from '../../types';
 import { JobSearchAdapter } from './JobSearchAdapter';
 import { GREENHOUSE_COMPANIES } from '../..//platforms';
 

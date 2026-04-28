@@ -1,4 +1,4 @@
-import { Job, JobSearchParams, Platform } from '@/types';
+import { Job, JobSearchParams, Platform } from '../types';
 import { NaukriAdapter } from './adapters/NaukriAdapter';
 import { LinkedInAdapter } from './adapters/LinkedInAdapter';
 import { GreenhouseAdapter } from './adapters/GreenhouseAdapter';

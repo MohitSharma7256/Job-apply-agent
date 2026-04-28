@@ -1,4 +1,4 @@
-import { Job, UserProfile } from '@/types';
+import { Job, UserProfile } from '../types';
 
 export class CoverLetterService {
   async generateCoverLetter(job: Job, profile: UserProfile): Promise<string> {

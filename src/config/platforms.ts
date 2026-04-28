@@ -1,4 +1,4 @@
-import { PlatformConfig } from '@/types';
+import { PlatformConfig } from '../types';
 
 export const PLATFORMS: Record<string, PlatformConfig> = {
   naukri: {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Job } from '@/types';
+import { Job } from '../types';
 
 interface UseJobPollingOptions {
   enabled: boolean;

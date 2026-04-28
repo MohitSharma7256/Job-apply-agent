@@ -1,5 +1,5 @@
 import { google } from 'googleapis';
-import { ApplicationRecord } from '@/types';
+import { ApplicationRecord } from '../types';
 import { format } from 'date-fns';
 import * as fs from 'fs';
 import * as path from 'path';

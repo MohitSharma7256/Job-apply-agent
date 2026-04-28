@@ -1,8 +1,8 @@
 import { Worker } from 'bullmq';
 import { connection } from '../lib/queue/jobQueue';
-import { automationService } from '@/services/automationService';
-import { Job, UserProfile } from '@/types';
-import { supabase } from '@/services/supabaseService';
+import { automationService } from '../services/automationService';
+import { Job, UserProfile } from '../types';
+import { supabase } from '../services/supabaseService';
 
 export const startBrowserWorker = (io: any) => {
   const worker = new Worker('job-applications', async (bullJob) => {

@@ -1,5 +1,5 @@
 import { chromium, Browser, Page, BrowserContext } from 'playwright';
-import { Job, UserProfile } from '@/types';
+import { Job, UserProfile } from '../types';
 import { loginManager } from './sessionManager';
 import { resumeTailor } from '../..//ai/resumeTailor';
 import { referralHunter } from '../..//automation/referralHunter';
