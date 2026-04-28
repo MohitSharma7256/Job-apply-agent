@@ -1,6 +1,3 @@
-export { ActivityFeed } from './ActivityFeed';
-export { ApplyProgress } from './ApplyProgress';
-export { JobDetailView } from './JobDetailView';
-export { PlatformGrid } from './PlatformGrid';
-export { StatsDashboard } from './StatsDashboard';
-export * from './ui';
+export * from './ActivityFeed';
+export * from './PlatformGrid';
+// Add other components as they are created
