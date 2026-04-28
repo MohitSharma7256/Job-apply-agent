@@ -859,22 +859,22 @@ export default function Dashboard() {
         </main>
       </div>
 
-      {/* Job Detail Modal */}
-      <JobDetailView 
+      {/* Job Detail Modal - Temporarily commented out */}
+      {/* <JobDetailView 
         job={selectedJob}
         isOpen={!!selectedJob}
         onClose={() => setSelectedJob(null)}
         onApply={handleApply}
         isApplying={isApplying === selectedJob?.id}
-      />
-      {/* Batch Apply Progress Modal */}
-      <ApplyProgress
+      /> */}
+      {/* Batch Apply Progress Modal - Temporarily commented out */}
+      {/* <ApplyProgress
         isOpen={batchProgress.isOpen}
         totalJobs={batchProgress.total}
         currentJobIndex={batchProgress.results.length}
         results={batchProgress.results}
         onClose={() => setBatchProgress(prev => ({ ...prev, isOpen: false }))}
-      />
+      /> */}
     </div>
   );
 

@@ -95,7 +95,7 @@ export class SheetService {
       });
       console.log('Sheet initialized with headers');
     } catch (error: any) {
-      if (error.code !== 409) { / 409 = already exists
+      if (error.code !== 409) { // 409 = already exists
         throw error;
       }
     }

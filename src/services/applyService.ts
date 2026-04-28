@@ -1,5 +1,5 @@
 import { Job, Platform } from '../types';
-import { PLATFORMS, DAILY_APPLICATION_LIMIT } from '../../lib/automation/platforms';
+import { PLATFORMS, DAILY_APPLICATION_LIMIT } from '../config/platforms';
 
 interface BrowserConfig {
   wsEndpoint?: string;

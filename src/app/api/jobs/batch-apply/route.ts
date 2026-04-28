@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { applyService } from '../../../../../services/applyService';
-import { sheetService } from '../../../../../services/sheetService';
-import { platformHealthService } from '../../../../../services/automation';
+import { applyService } from '../../../../services/applyService';
+import { sheetService } from '../../../../services/sheetService';
+import { platformHealthService } from '../../../../services/automation';
 import { v4 as uuidv4 } from 'uuid';
 
 export const runtime = 'nodejs';

@@ -1,6 +1,6 @@
 import { Job, UserProfile } from '../types';
 
-export class aiLetterService {
+export class AiLetterService {
   async generateCoverLetter(job: Job, profile: UserProfile): Promise<string> {
     const name = profile.name || 'Candidate';
     const title = job.title || 'Position';
@@ -21,4 +21,4 @@ ${name}
   }
 }
 
-export const aiLetterService = new aiLetterService();
+export const aiLetterService = new AiLetterService();

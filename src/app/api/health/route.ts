@@ -31,42 +31,58 @@ export async function GET(request: NextRequest) {
       allHealthy = false;
     }
 
-    const redisStart = Date.now();
-    try {
-      const redis = (await import('../../../lib/redis')).getRedis();
-      await redis.ping();
+    // Skip Redis check during build time
+    if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build') {
       checks.redis = {
-        status: 'healthy',
-        latency: Date.now() - redisStart,
+        status: 'skipped',
+        error: 'Redis check skipped during build',
       };
-    } catch (error: any) {
-      checks.redis = {
-        status: 'unhealthy',
-        error: error.message,
-      };
-      allHealthy = false;
+    } else {
+      const redisStart = Date.now();
+      try {
+        const redis = (await import('../../../lib/redis')).getRedis();
+        await redis.ping();
+        checks.redis = {
+          status: 'healthy',
+          latency: Date.now() - redisStart,
+        };
+      } catch (error: any) {
+        checks.redis = {
+          status: 'unhealthy',
+          error: error.message,
+        };
+        allHealthy = false;
+      }
     }
 
-    try {
-      const { Queue } = await import('bullmq');
-      const connection = {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-      };
-      const queue = new Queue('job-apply', { connection });
-      const counts = await queue.getJobCounts();
+    // Skip queue check during build time
+    if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build') {
       checks.queue = {
-        status: 'healthy',
-        waiting: counts.waiting,
-        active: counts.active,
-        completed: counts.completed,
-        failed: counts.failed,
+        status: 'skipped',
+        error: 'Queue check skipped during build',
       };
-    } catch (error: any) {
-      checks.queue = {
-        status: 'degraded',
-        error: error.message,
-      };
+    } else {
+      try {
+        const { Queue } = await import('bullmq');
+        const connection = {
+          host: process.env.REDIS_HOST || 'localhost',
+          port: parseInt(process.env.REDIS_PORT || '6379'),
+        };
+        const queue = new Queue('job-apply', { connection });
+        const counts = await queue.getJobCounts();
+        checks.queue = {
+          status: 'healthy',
+          waiting: counts.waiting,
+          active: counts.active,
+          completed: counts.completed,
+          failed: counts.failed,
+        };
+      } catch (error: any) {
+        checks.queue = {
+          status: 'degraded',
+          error: error.message,
+        };
+      }
     }
 
     const platforms: PlatformHealth[] = [];
@@ -77,7 +93,7 @@ export async function GET(request: NextRequest) {
       try {
         const { data: session } = await supabase
           .from('platform_sessions')
-          .select('expiresAt, status')
+          .select('expiresAt, status, createdAt')
           .eq('platform', platform)
           .order('createdAt', { ascending: false })
           .limit(1)
