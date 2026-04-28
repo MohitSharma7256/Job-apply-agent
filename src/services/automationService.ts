@@ -1,8 +1,8 @@
 import { chromium, Browser, Page, BrowserContext } from 'playwright';
 import { Job, UserProfile } from '@/types';
 import { loginManager } from './sessionManager';
-import { resumeTailor } from '@/lib/ai/resumeTailor';
-import { referralHunter } from '@/lib/automation/referralHunter';
+import { resumeTailor } from '../..//ai/resumeTailor';
+import { referralHunter } from '../..//automation/referralHunter';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';

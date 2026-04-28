@@ -1,5 +1,5 @@
-import { supabase } from '@/services/supabaseService';
-import { encrypt, decrypt } from '@/lib/encryption';
+import { supabase } from '../..//supabaseService';
+import { encrypt, decrypt } from '../..//encryption';
 
 export interface SessionData {
   cookies: any[];

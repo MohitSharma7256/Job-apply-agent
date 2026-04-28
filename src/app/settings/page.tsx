@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { cn } from '../../utils/helpers';
+import { cn } from '@/utils/helpers';
 import { 
   Settings, User, Briefcase, FileText, Key, Bell, Shield, 
   Upload, Plus, Trash2, Save, RefreshCw, Check, AlertCircle

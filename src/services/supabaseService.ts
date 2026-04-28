@@ -1,4 +1,4 @@
-export { supabase } from '@/lib/supabaseClient';
+export { supabase } from '../..//supabaseClient';
 import { Job, UserProfile, ApplicationRecord } from '@/types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
