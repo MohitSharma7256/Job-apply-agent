@@ -44,7 +44,7 @@ export class ResumeTailor {
 
       const data = JSON.parse(response.choices[0].message.content || '{}');
       
-      / Generate PDF on the fly
+    // Generate PDF on the fly
       const doc = new jsPDF();
       doc.setFontSize(22);
       doc.text(profile.name, 20, 20);

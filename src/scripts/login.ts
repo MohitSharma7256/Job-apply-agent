@@ -81,7 +81,7 @@ async function loginAndCapture(platform: string, userId: string = 'default-user'
   console.log(`\n🚀 Starting Manual Login for: ${platform.toUpperCase()}`);
   console.log('━'.repeat(50));
 
-  / Launch headed browser (real visible Chrome)
+    // Launch headed browser (real visible Chrome)
   const browser = await chromium.launch({
     headless: false,
     args: ['--start-maximized'],
@@ -101,10 +101,10 @@ async function loginAndCapture(platform: string, userId: string = 'default-user'
   console.log(`   After logging in successfully, come back here and press ENTER.`);
   console.log(`\n   Waiting for you to complete login...`);
 
-  / Wait for user to manually login
+    // Wait for user to manually login
   await waitForUser('\n   Press ENTER after you have logged in successfully: ');
 
-  / Verify login success
+    // Verify login success
   const currentUrl = page.url();
   const isLoggedIn = config.successPattern.test(currentUrl);
 
@@ -115,7 +115,7 @@ async function loginAndCapture(platform: string, userId: string = 'default-user'
     console.log(`\n✅ Login detected! Capturing session...`);
   }
 
-  / Capture cookies
+    // Capture cookies
   const cookies = await context.cookies();
   const localStorage: Record<string, string> = {};
 
@@ -130,7 +130,7 @@ async function loginAndCapture(platform: string, userId: string = 'default-user'
     });
     Object.assign(localStorage, storageItems);
   } catch (e) {
-    / localStorage might be restricted
+    // localStorage might be restricted
   }
 
   const sessionData = {
@@ -142,7 +142,7 @@ async function loginAndCapture(platform: string, userId: string = 'default-user'
 
   console.log(`\n💾 Saving session (${cookies.length} cookies captured)...`);
 
-  / Encrypt and save to Supabase
+    // Encrypt and save to Supabase
   const encryptedData = encrypt(JSON.stringify(sessionData));
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -171,7 +171,7 @@ async function loginAndCapture(platform: string, userId: string = 'default-user'
   console.log('\n✅ Browser closed. You can close this terminal.');
 }
 
-/ Main
+    // Main
 const platform = process.argv[2];
 const userId = process.argv[3] || 'default-user';
 

@@ -11,7 +11,7 @@ export interface CompanyProfile {
 
 export class CompanyResearchService {
   async getCompanyProfile(companyName: string): Promise<CompanyProfile> {
-    / 1. Check Cache first (Supabase company_cache table)
+    // 1. Check Cache first (Supabase company_cache table)
     const cached = await this.getFromCache(companyName);
     if (cached) {
       console.log(`[Research] Cache hit for ${companyName}`);
@@ -20,8 +20,8 @@ export class CompanyResearchService {
 
     console.log(`[Research] Searching live data for ${companyName}...`);
     
-    / 2. Fetch from External API (Simulated with Serper/Perplexity logic)
-    / In production, you'd use: fetch('https://google.serper.dev/search', ...)
+    // 2. Fetch from External API (Simulated with Serper/Perplexity logic)
+    // In production, you'd use: fetch('https://google.serper.dev/search', ...)
     const profile: CompanyProfile = {
       name: companyName,
       size: '500-1000 employees',
@@ -34,7 +34,7 @@ export class CompanyResearchService {
       description: `${companyName} is a leading innovator in technology services, focusing on scalable infrastructure.`
     };
 
-    / 3. Store in Cache for 24h
+    // 3. Store in Cache for 24h
     await this.saveToCache(companyName, profile);
 
     return profile;

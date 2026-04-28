@@ -11,18 +11,18 @@ export class ReferralHunter {
     console.log(`[Referral Hunter] Searching for employees at ${job.company}...`);
 
     try {
-      / 1. Search for employees (Engineering Manager or HR)
+    // 1. Search for employees (Engineering Manager or HR)
       const searchQuery = `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(job.company + ' Hiring Manager')}`;
       await page.goto(searchQuery, { waitUntil: 'domcontentloaded' });
       await new Promise(r => setTimeout(r, 3000));
 
-      / 2. Find the first "Connect" button
+    // 2. Find the first "Connect" button
       const connectBtn = page.locator('button:has-text("Connect")').first();
       if (await connectBtn.isVisible()) {
         await connectBtn.click();
         await new Promise(r => setTimeout(r, 1000));
 
-        / 3. Add a personalized note
+    // 3. Add a personalized note
         const addNoteBtn = page.locator('button:has-text("Add a note")');
         if (await addNoteBtn.isVisible()) {
           await addNoteBtn.click();
@@ -32,8 +32,8 @@ export class ReferralHunter {
           
           console.log(`[Referral Hunter] Sending personalized request: ${message.substring(0, 50)}...`);
           
-          / In production, we'd click 'Send' - for now, just log
-          / await page.click('button:has-text("Send")');
+    // In production, we'd click 'Send' - for now, just log
+    // await page.click('button:has-text("Send")');
         }
       } else {
         console.log(`[Referral Hunter] No direct connect button found for ${job.company}`);
