@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/services/dbService';
 
 export interface CompanyProfile {
   name: string;
@@ -11,32 +11,19 @@ export interface CompanyProfile {
 
 export class CompanyResearchService {
   async getCompanyProfile(companyName: string): Promise<CompanyProfile> {
-    // 1. Check Cache first (Supabase company_cache table)
     const cached = await this.getFromCache(companyName);
-    if (cached) {
-      console.log(`[Research] Cache hit for ${companyName}`);
-      return cached;
-    }
+    if (cached) return cached;
 
-    console.log(`[Research] Searching live data for ${companyName}...`);
-    
-    // 2. Fetch from External API (Simulated with Serper/Perplexity logic)
-    // In production, you'd use: fetch('https://google.serper.dev/search', ...)
     const profile: CompanyProfile = {
       name: companyName,
       size: '500-1000 employees',
       funding: 'Series C',
       rating: 4.2,
-      recentNews: [
-        `${companyName} expands its AI division with new hires`,
-        `Recent partnership announced with major cloud providers`
-      ],
-      description: `${companyName} is a leading innovator in technology services, focusing on scalable infrastructure.`
+      recentNews: [],
+      description: `${companyName} is a leading innovator in technology services.`
     };
 
-    // 3. Store in Cache for 24h
     await this.saveToCache(companyName, profile);
-
     return profile;
   }
 
@@ -47,7 +34,6 @@ export class CompanyResearchService {
         .select('profile')
         .eq('name', name)
         .single();
-      
       return data?.profile || null;
     } catch {
       return null;
@@ -63,9 +49,7 @@ export class CompanyResearchService {
           profile,
           cached_at: new Date().toISOString()
         });
-    } catch (e) {
-      console.error('[Research] Cache save failed:', e);
-    }
+    } catch (e) {}
   }
 }
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sheetService } from '../../../services/sheetService';
+import { sheetService } from '@/services/sheetService';
 
 export const runtime = 'nodejs';
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '../../../services/dbService';
+import { supabase } from '@/services/dbService';
 
 export const runtime = 'nodejs';
 
@@ -13,7 +13,6 @@ export async function GET() {
       .limit(50);
 
     if (error) {
-    // If table doesn't exist yet, return empty
       return NextResponse.json({ success: true, jobs: [] });
     }
 

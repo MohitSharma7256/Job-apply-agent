@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../services/dbService';
-import { aiLetterService } from '../../../../services/aiLetterService';
+import { supabase } from '@/services/dbService';
+import { aiLetterService } from '@/services/aiLetterService';
 
 export const runtime = 'nodejs';
 

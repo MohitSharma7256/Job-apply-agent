@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { aiService } from '../../../../services/aiService';
+import { aiService } from '../@/services/aiService';
 import { Job, UserProfile } from '../../../../	ypes';
 
 export const runtime = 'nodejs';
