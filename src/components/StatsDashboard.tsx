@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Target, Briefcase, Calendar, Award } from 'lucide-react';
-import { cn } from '@/utils/helpers';
+import { cn } from '@/utils';
 
 interface StatsData {
   today: number;

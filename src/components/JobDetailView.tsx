@@ -3,7 +3,7 @@ import { Job, UserProfile } from '@/types';
 import { GlassCard } from './ui/GlassCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle2, AlertCircle, Briefcase, MapPin, DollarSign, ExternalLink, Wand2 } from 'lucide-react';
-import { cn } from '@/utils/helpers';
+import { cn } from '@/utils';
 
 interface JobDetailViewProps {
   job: Job | null;

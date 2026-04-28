@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GlassCard } from './ui/GlassCard';
 import { Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
-import { cn } from '@/utils/helpers';
+import { cn } from '@/utils';
 
 interface ApplyProgressProps {
   isOpen: boolean;

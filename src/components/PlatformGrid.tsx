@@ -1,6 +1,6 @@
 import React from 'react';
 import { GlassCard } from './ui/GlassCard';
-import { cn, getPlatformIcon } from '@/utils/helpers';
+import { cn, getPlatformIcon } from '@/utils';
 import { Activity, Clock, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 interface PlatformStatus {

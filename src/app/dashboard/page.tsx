@@ -24,7 +24,7 @@ import {
   Trash2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn, getPlatformIcon, getStatusColor } from "@/utils/helpers";
+import { cn, getPlatformIcon, getStatusColor } from "@/utils";
 
 const PLATFORMS: { id: Platform; name: string; icon: string }[] = [
   { id: "naukri", name: "Naukri.com", icon: "📋" },

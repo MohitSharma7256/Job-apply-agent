@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { JobEvent } from '@/hooks/useJobSocket';
-import { cn, getPlatformIcon } from '@/utils/helpers';
+import { cn, getPlatformIcon } from '@/utils';
 import { CheckCircle2, XCircle, Loader2, Search, Zap } from 'lucide-react';
 
 interface Props {
