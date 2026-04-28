@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../services/supabaseService';
-import { coverLetterService } from '../../../../services/coverLetterService';
+import { supabase } from '@/services/supabaseService';
+import { coverLetterService } from '@/services/coverLetterService';
 
 export const runtime = 'nodejs';
 
@@ -16,7 +16,6 @@ export async function POST(
       return NextResponse.json({ error: 'Profile required' }, { status: 400 });
     }
 
-    // 1. Get job details
     const { data: job, error: jobError } = await supabase
       .from('jobs')
       .select('*')
@@ -27,11 +26,7 @@ export async function POST(
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
-    // 2. Generate Cover Letter
     const coverLetter = await coverLetterService.generateCoverLetter(profile, job);
-
-    // 3. Queue the application
-    // (Logic for queuing would go here)
 
     return NextResponse.json({ 
       success: true, 

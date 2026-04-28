@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { loginManager } from '../../../services/sessionManager';
+import { loginManager } from '@/services/sessionManager';
 
 export const runtime = 'nodejs';
 
