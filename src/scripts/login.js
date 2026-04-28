@@ -56,11 +56,11 @@ async function loginAndCapture(platform, userId = 'default-user') {
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
   if (!supabaseUrl || !supabaseKey) {
     console.error('❌ Supabase credentials missing in .env file!');
-    console.log('Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to your .env file');
+    console.log('Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY/SUPABASE_SERVICE_ROLE_KEY to your .env file');
     process.exit(1);
   }
 
