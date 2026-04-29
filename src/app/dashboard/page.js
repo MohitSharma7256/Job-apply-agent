@@ -33,7 +33,6 @@ import {
   Brain,
   Shield
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { cn, getPlatformIcon, getStatusColor } from "../../utils/helpers";
 
 const PLATFORMS = [
@@ -95,6 +94,7 @@ export default function Dashboard() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedResume, setUploadedResume] = useState(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -102,6 +102,12 @@ export default function Dashboard() {
     };
     window.addEventListener('mousemove', handleMouseMove);
     
+    setTimeout(() => setIsLoaded(true), 100);
+    
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  useEffect(() => {
     const savedProfile = localStorage.getItem(STORAGE_KEY_PROFILE);
     const savedSearch = localStorage.getItem(STORAGE_KEY_SEARCH);
     
@@ -252,26 +258,22 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <AnimatePresence>
-        {toast && (
-          <motion.div 
-            initial={{ opacity: 0, y: -20, x: '-50%' }}
-            animate={{ opacity: 1, y: 0, x: '-50%' }}
-            exit={{ opacity: 0, y: -20, x: '-50%' }}
-            className={cn(
-              "fixed top-6 left-1/2 z-[100] px-6 py-3 rounded-xl shadow-2xl backdrop-blur-xl border font-medium flex items-center gap-3",
-              toast.type === "success" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : 
-              toast.type === "error" ? "bg-red-500/10 border-red-500/20 text-red-400" : 
-              "bg-blue-500/10 border-blue-500/20 text-blue-400"
-            )}
-          >
-            {toast.type === "success" ? <CheckCircle2 className="w-5 h-5" /> : 
-             toast.type === "error" ? <AlertCircle className="w-5 h-5" /> : 
-             <Loader2 className="w-5 h-5 animate-spin" />}
-            {toast.message}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Toast Notification */}
+      {toast && (
+        <div 
+          className={cn(
+            "fixed top-6 left-1/2 z-[100] px-6 py-3 rounded-xl shadow-2xl backdrop-blur-xl border font-medium flex items-center gap-3 -translate-x-1/2 transition-all duration-300",
+            toast.type === "success" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : 
+            toast.type === "error" ? "bg-red-500/10 border-red-500/20 text-red-400" : 
+            "bg-blue-500/10 border-blue-500/20 text-blue-400"
+          )}
+        >
+          {toast.type === "success" ? <CheckCircle2 className="w-5 h-5" /> : 
+           toast.type === "error" ? <AlertCircle className="w-5 h-5" /> : 
+           <Loader2 className="w-5 h-5 animate-spin" />}
+          {toast.message}
+        </div>
+      )}
 
       <div className="flex h-screen overflow-hidden relative z-10">
         {/* Enhanced Sidebar */}
@@ -294,11 +296,8 @@ export default function Dashboard() {
           {/* Stats Cards */}
           <div className="space-y-4 mb-8">
             {stats.map((stat, index) => (
-              <motion.div
+              <div
                 key={index}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
                 className="p-4 rounded-xl bg-gradient-to-br from-white/5 to-white/10 border border-white/10 hover:border-white/20 transition-all duration-300"
               >
                 <div className="flex items-center justify-between">
@@ -312,17 +311,14 @@ export default function Dashboard() {
                     {stat.icon}
                   </div>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
 
           <nav className="space-y-2 flex-1">
             {["search", "profile", "applications", "stats"].map((tab, index) => (
-              <motion.button
+              <button
                 key={tab}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 + 0.4 }}
                 onClick={() => setActiveTab(tab)}
                 className={cn(
                   "w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all group relative overflow-hidden",
@@ -342,7 +338,7 @@ export default function Dashboard() {
                 {activeTab === tab && (
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-indigo-500/10" />
                 )}
-              </motion.button>
+              </button>
             ))}
           </nav>
 
@@ -353,9 +349,8 @@ export default function Dashboard() {
                 <span className="text-xs font-bold text-blue-400">{todayCount}/50</span>
               </div>
               <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(todayCount / 50) * 100}%` }}
+                <div 
+                  style={{ width: `${(todayCount / 50) * 100}%` }}
                   className="h-full bg-gradient-to-r from-blue-500 to-indigo-500"
                 />
               </div>
@@ -383,9 +378,7 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center gap-4">
               {activeTab === "search" && jobs.length > 0 && (
-                <motion.button 
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                <button 
                   onClick={() => {
                     setBatchSelecting(!batchSelecting);
                     if (batchSelecting) setSelectedJobIds(new Set());
@@ -398,7 +391,7 @@ export default function Dashboard() {
                   )}
                 >
                   {batchSelecting ? "Cancel Batch" : "Batch Apply"}
-                </motion.button>
+                </button>
               )}
               <div className="relative">
                 <div className="h-12 w-12 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-white/10 flex items-center justify-center overflow-hidden">
@@ -410,304 +403,283 @@ export default function Dashboard() {
           </header>
 
           <div className="p-8 max-w-7xl mx-auto">
-            <AnimatePresence mode="wait">
-              {activeTab === "search" && (
-                <motion.div
-                  key="search"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="space-y-8"
-                >
-                  {/* Enhanced Search Config */}
-                  <GlassCard className="p-8 bg-gradient-to-br from-white/5 to-white/10 border-white/10">
-                    <div className="mb-8">
-                      <h3 className="text-2xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-200">
-                        AI Job Search Configuration
-                      </h3>
-                      <p className="text-slate-400">Configure your AI-powered job search parameters</p>
-                    </div>
+            {activeTab === "search" && (
+              <div className="space-y-8">
+                {/* Enhanced Search Config */}
+                <GlassCard className="p-8 bg-gradient-to-br from-white/5 to-white/10 border-white/10">
+                  <div className="mb-8">
+                    <h3 className="text-2xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-200">
+                      AI Job Search Configuration
+                    </h3>
+                    <p className="text-slate-400">Configure your AI-powered job search parameters</p>
+                  </div>
 
-                    <div className="grid lg:grid-cols-2 gap-8">
-                      <div className="space-y-6">
-                        <div>
-                          <label className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                            <Brain className="w-4 h-4" />
-                            Target Keywords
-                          </label>
-                          <div className="flex flex-wrap gap-2 mb-3">
-                            {searchParams.keywords.map((kw, i) => (
-                              <motion.span
-                                key={i}
-                                initial={{ opacity: 0, scale: 0.8 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-500/10 to-blue-600/10 text-blue-400 border border-blue-500/20 text-sm"
-                              >
-                                {kw}
-                                <button 
-                                  onClick={() => setSearchParams({ ...searchParams, keywords: searchParams.keywords.filter((_, idx) => idx !== i) })}
-                                  className="hover:text-blue-300 transition-colors"
-                                >
-                                  <X className="w-3.5 h-3.5" />
-                                </button>
-                              </motion.span>
-                            ))}
-                          </div>
-                          <div className="relative">
-                            <input 
-                              type="text" 
-                              value={newKeyword} 
-                              onChange={(e) => setNewKeyword(e.target.value)} 
-                              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addKeyword())}
-                              placeholder="e.g. Senior Frontend, React, Remote"
-                              className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all pr-12 placeholder-slate-500"
-                            />
-                            <button 
-                              onClick={addKeyword}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg transition-all"
+                  <div className="grid lg:grid-cols-2 gap-8">
+                    <div className="space-y-6">
+                      <div>
+                        <label className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                          <Brain className="w-4 h-4" />
+                          Target Keywords
+                        </label>
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {searchParams.keywords.map((kw, i) => (
+                            <span
+                              key={i}
+                              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-500/10 to-blue-600/10 text-blue-400 border border-blue-500/20 text-sm"
                             >
-                              <Plus className="w-5 h-5" />
-                            </button>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                            <MapPin className="w-4 h-4" />
-                            Locations
-                          </label>
-                          <div className="flex flex-wrap gap-2 mb-3">
-                            {searchParams.locations.map((loc, i) => (
-                              <motion.span
-                                key={i}
-                                initial={{ opacity: 0, scale: 0.8 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 text-emerald-400 border border-emerald-500/20 text-sm"
+                              {kw}
+                              <button 
+                                onClick={() => setSearchParams({ ...searchParams, keywords: searchParams.keywords.filter((_, idx) => idx !== i) })}
+                                className="hover:text-blue-300 transition-colors"
                               >
-                                {loc}
-                                <button 
-                                  onClick={() => setSearchParams({ ...searchParams, locations: searchParams.locations.filter((_, idx) => idx !== i) })}
-                                  className="hover:text-emerald-300 transition-colors"
-                                >
-                                  <X className="w-3.5 h-3.5" />
-                                </button>
-                              </motion.span>
-                            ))}
-                          </div>
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                        <div className="relative">
                           <input 
                             type="text" 
-                            value={newLocation} 
-                            onChange={(e) => setNewLocation(e.target.value)} 
-                            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addLocation())}
-                            placeholder="Add location..."
-                            className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all placeholder-slate-500"
+                            value={newKeyword} 
+                            onChange={(e) => setNewKeyword(e.target.value)} 
+                            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addKeyword())}
+                            placeholder="e.g. Senior Frontend, React, Remote"
+                            className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all pr-12 placeholder-slate-500"
                           />
+                          <button 
+                            onClick={addKeyword}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg transition-all"
+                          >
+                            <Plus className="w-5 h-5" />
+                          </button>
                         </div>
                       </div>
 
-                      <div className="space-y-6">
-                        <div>
-                          <label className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                            <Target className="w-4 h-4" />
-                            Platforms
-                          </label>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            {PLATFORMS.map((p) => (
-                              <motion.button
-                                key={p.id}
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => togglePlatform(p.id)}
-                                className={cn(
-                                  "flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all text-sm font-medium relative overflow-hidden",
-                                  searchParams.platforms.includes(p.id)
-                                    ? `bg-gradient-to-r ${p.color} text-white border-transparent shadow-lg` 
-                                    : "bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10"
-                                )}
+                      <div>
+                        <label className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                          <MapPin className="w-4 h-4" />
+                          Locations
+                        </label>
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {searchParams.locations.map((loc, i) => (
+                            <span
+                              key={i}
+                              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 text-emerald-400 border border-emerald-500/20 text-sm"
+                            >
+                              {loc}
+                              <button 
+                                onClick={() => setSearchParams({ ...searchParams, locations: searchParams.locations.filter((_, idx) => idx !== i) })}
+                                className="hover:text-emerald-300 transition-colors"
                               >
-                                <span>{p.icon}</span>
-                                {p.name.split('.')[0]}
-                                {searchParams.platforms.includes(p.id) && (
-                                  <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
-                                )}
-                              </motion.button>
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                        <input 
+                          type="text" 
+                          value={newLocation} 
+                          onChange={(e) => setNewLocation(e.target.value)} 
+                          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addLocation())}
+                          placeholder="Add location..."
+                          className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all placeholder-slate-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div>
+                        <label className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                          <Target className="w-4 h-4" />
+                          Platforms
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {PLATFORMS.map((p) => (
+                            <button
+                              key={p.id}
+                              onClick={() => togglePlatform(p.id)}
+                              className={cn(
+                                "flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all text-sm font-medium relative overflow-hidden",
+                                searchParams.platforms.includes(p.id)
+                                  ? `bg-gradient-to-r ${p.color} text-white border-transparent shadow-lg` 
+                                  : "bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10"
+                              )}
+                            >
+                              <span>{p.icon}</span>
+                              {p.name.split('.')[0]}
+                              {searchParams.platforms.includes(p.id) && (
+                                <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <Filter className="w-4 h-4" />
+                            Filters
+                          </label>
+                          <div className="relative">
+                            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                            <select 
+                              value={filterScore} 
+                              onChange={(e) => setFilterScore(Number(e.target.value))}
+                              className="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 outline-none appearance-none cursor-pointer"
+                            >
+                              <option value={0}>All Matches</option>
+                              <option value={8}>Elite (8+)</option>
+                              <option value={6}>Strong (6+)</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <ArrowUpDown className="w-4 h-4" />
+                            Sort
+                          </label>
+                          <div className="relative">
+                            <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                            <select 
+                              value={sortBy} 
+                              onChange={(e) => setSortBy(e.target.value)}
+                              className="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 outline-none appearance-none cursor-pointer"
+                            >
+                              <option value="score">By Score</option>
+                              <option value="date">By Date</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleSearch}
+                    disabled={isSearching}
+                    className="w-full mt-8 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 py-4 font-bold text-white shadow-xl shadow-blue-600/20 hover:shadow-blue-600/40 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:translate-y-0 flex items-center justify-center gap-3 relative overflow-hidden"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 opacity-0 hover:opacity-100 transition-opacity duration-300" />
+                    <span className="relative flex items-center gap-3">
+                      {isSearching ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <Rocket className="w-5 h-5" />
+                      )}
+                      {isSearching ? "AI is Searching..." : "Launch AI Job Search"}
+                    </span>
+                    <div className="absolute inset-0 bg-white/20 transform scale-x-0 hover:scale-x-100 transition-transform duration-500 origin-left" />
+                  </button>
+                </GlassCard>
+
+                {/* Results Header */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-2xl font-bold text-white flex items-center gap-3">
+                      <Sparkles className="w-6 h-6 text-blue-400" />
+                      AI-Discovered Opportunities
+                      <span className="px-3 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 text-sm">
+                        {filteredJobs.length}
+                      </span>
+                    </h3>
+                    <p className="text-slate-400 mt-1">Curated by AI based on your profile</p>
+                  </div>
+                </div>
+
+                {/* Enhanced Job Grid */}
+                <div className="grid gap-4">
+                  {filteredJobs.length === 0 ? (
+                    <div className="text-center py-24 border-2 border-dashed border-white/5 rounded-3xl bg-gradient-to-br from-white/5 to-transparent">
+                      <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 flex items-center justify-center mx-auto mb-4">
+                        <Search className="w-8 h-8 text-blue-400" />
+                      </div>
+                      <p className="text-slate-400 font-medium mb-2">Ready to discover your next role?</p>
+                      <p className="text-xs text-slate-500">Adjust filters or hit search to begin</p>
+                    </div>
+                  ) : (
+                    filteredJobs.map((job, index) => (
+                      <div
+                        key={job.id}
+                        className={cn(
+                          "group relative flex items-center gap-6 p-6 rounded-2xl border transition-all cursor-pointer overflow-hidden",
+                          "bg-gradient-to-br from-white/5 to-white/10 border-white/10 hover:border-white/20",
+                          job.applied && "opacity-60"
+                        )}
+                        onClick={() => setSelectedJob(job)}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        
+                        {/* Match Score Indicator */}
+                        <div className="relative z-10 h-16 w-16 flex-shrink-0">
+                          <svg className="h-16 w-16 -rotate-90">
+                            <circle 
+                              cx="32" cy="32" r="28" 
+                              className="fill-none stroke-white/5 stroke-[4px]"
+                            />
+                            <circle 
+                              cx="32" cy="32" r="28" 
+                              className={cn(
+                                "fill-none stroke-[4px] stroke-linecap-round transition-all",
+                                (job.matchScore || 0) >= 8 ? "stroke-emerald-500" : 
+                                (job.matchScore || 0) >= 6 ? "stroke-amber-500" : "stroke-slate-500"
+                              )}
+                              style={{
+                                strokeDasharray: `${(job.matchScore || 0) * 17.6} 200`
+                              }}
+                            />
+                          </svg>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-sm font-bold text-white">{(job.matchScore || 0).toFixed(0)}</span>
+                          </div>
+                        </div>
+
+                        <div className="relative z-10 flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-bold text-white truncate text-xl">{job.title}</h4>
+                            {job.applied && (
+                              <span className="text-xs font-bold uppercase tracking-widest text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded border border-blue-400/20">Applied</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-slate-400">
+                            <span className="font-semibold text-slate-300">{job.company}</span>
+                            <span className="w-1 h-1 rounded-full bg-slate-700" />
+                            <span>{job.location}</span>
+                            <span className="w-1 h-1 rounded-full bg-slate-700" />
+                            <span className="text-slate-500">{getPlatformIcon(job.platform)} {job.platform}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            {job.skills.slice(0, 5).map((skill, i) => (
+                              <span key={i} className="text-xs font-bold uppercase tracking-tighter px-2 py-0.5 rounded bg-white/5 text-slate-500 border border-white/5">
+                                {skill}
+                              </span>
                             ))}
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                              <Filter className="w-4 h-4" />
-                              Filters
-                            </label>
-                            <div className="relative">
-                              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                              <select 
-                                value={filterScore} 
-                                onChange={(e) => setFilterScore(Number(e.target.value))}
-                                className="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 outline-none appearance-none cursor-pointer"
-                              >
-                                <option value={0}>All Matches</option>
-                                <option value={8}>Elite (8+)</option>
-                                <option value={6}>Strong (6+)</option>
-                              </select>
-                            </div>
-                          </div>
-                          <div>
-                            <label className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                              <ArrowUpDown className="w-4 h-4" />
-                              Sort
-                            </label>
-                            <div className="relative">
-                              <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                              <select 
-                                value={sortBy} 
-                                onChange={(e) => setSortBy(e.target.value)}
-                                className="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 outline-none appearance-none cursor-pointer"
-                              >
-                                <option value="score">By Score</option>
-                                <option value="date">By Date</option>
-                              </select>
-                            </div>
-                          </div>
+                        <div className="relative z-10 flex items-center gap-3">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Handle apply logic here
+                            }}
+                            disabled={job.applied}
+                            className={cn(
+                              "px-5 py-2.5 rounded-xl font-bold text-sm transition-all",
+                              job.applied 
+                                ? "bg-white/5 text-slate-500 border border-white/10 cursor-not-allowed" 
+                                : "bg-gradient-to-r from-blue-500/20 to-indigo-500/20 text-blue-400 border border-blue-500/30 hover:border-blue-500/50"
+                            )}
+                          >
+                            {job.applied ? "Done" : "Apply Now"}
+                          </button>
                         </div>
                       </div>
-                    </div>
-
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={handleSearch}
-                      disabled={isSearching}
-                      className="w-full mt-8 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 py-4 font-bold text-white shadow-xl shadow-blue-600/20 hover:shadow-blue-600/40 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:translate-y-0 flex items-center justify-center gap-3 relative overflow-hidden"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 opacity-0 hover:opacity-100 transition-opacity duration-300" />
-                      <span className="relative flex items-center gap-3">
-                        {isSearching ? (
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : (
-                          <Rocket className="w-5 h-5" />
-                        )}
-                        {isSearching ? "AI is Searching..." : "Launch AI Job Search"}
-                      </span>
-                      <div className="absolute inset-0 bg-white/20 transform scale-x-0 hover:scale-x-100 transition-transform duration-500 origin-left" />
-                    </motion.button>
-                  </GlassCard>
-
-                  {/* Results Header */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-2xl font-bold text-white flex items-center gap-3">
-                        <Sparkles className="w-6 h-6 text-blue-400" />
-                        AI-Discovered Opportunities
-                        <span className="px-3 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 text-sm">
-                          {filteredJobs.length}
-                        </span>
-                      </h3>
-                      <p className="text-slate-400 mt-1">Curated by AI based on your profile</p>
-                    </div>
-                  </div>
-
-                  {/* Enhanced Job Grid */}
-                  <div className="grid gap-4">
-                    {filteredJobs.length === 0 ? (
-                      <div className="text-center py-24 border-2 border-dashed border-white/5 rounded-3xl bg-gradient-to-br from-white/5 to-transparent">
-                        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 flex items-center justify-center mx-auto mb-4">
-                          <Search className="w-8 h-8 text-blue-400" />
-                        </div>
-                        <p className="text-slate-400 font-medium mb-2">Ready to discover your next role?</p>
-                        <p className="text-xs text-slate-500">Adjust filters or hit search to begin</p>
-                      </div>
-                    ) : (
-                      filteredJobs.map((job, index) => (
-                        <motion.div
-                          layout
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                          key={job.id}
-                          className={cn(
-                            "group relative flex items-center gap-6 p-6 rounded-2xl border transition-all cursor-pointer overflow-hidden",
-                            "bg-gradient-to-br from-white/5 to-white/10 border-white/10 hover:border-white/20",
-                            job.applied && "opacity-60"
-                          )}
-                          onClick={() => setSelectedJob(job)}
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                          
-                          {/* Match Score Indicator */}
-                          <div className="relative z-10 h-16 w-16 flex-shrink-0">
-                            <svg className="h-16 w-16 -rotate-90">
-                              <circle 
-                                cx="32" cy="32" r="28" 
-                                className="fill-none stroke-white/5 stroke-[4px]"
-                              />
-                              <motion.circle 
-                                initial={{ strokeDasharray: "0 200" }}
-                                animate={{ strokeDasharray: `${(job.matchScore || 0) * 17.6} 200` }}
-                                cx="32" cy="32" r="28" 
-                                className={cn(
-                                  "fill-none stroke-[4px] stroke-linecap-round transition-all",
-                                  (job.matchScore || 0) >= 8 ? "stroke-emerald-500" : 
-                                  (job.matchScore || 0) >= 6 ? "stroke-amber-500" : "stroke-slate-500"
-                                )}
-                              />
-                            </svg>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <span className="text-sm font-bold text-white">{(job.matchScore || 0).toFixed(0)}</span>
-                            </div>
-                          </div>
-
-                          <div className="relative z-10 flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-bold text-white truncate text-xl">{job.title}</h4>
-                              {job.applied && (
-                                <span className="text-xs font-bold uppercase tracking-widest text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded border border-blue-400/20">Applied</span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-4 text-sm text-slate-400">
-                              <span className="font-semibold text-slate-300">{job.company}</span>
-                              <span className="w-1 h-1 rounded-full bg-slate-700" />
-                              <span>{job.location}</span>
-                              <span className="w-1 h-1 rounded-full bg-slate-700" />
-                              <span className="text-slate-500">{getPlatformIcon(job.platform)} {job.platform}</span>
-                            </div>
-                            <div className="flex flex-wrap gap-2 mt-3">
-                              {job.skills.slice(0, 5).map((skill, i) => (
-                                <span key={i} className="text-xs font-bold uppercase tracking-tighter px-2 py-0.5 rounded bg-white/5 text-slate-500 border border-white/5">
-                                  {skill}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="relative z-10 flex items-center gap-3">
-                            <motion.button 
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                // Handle apply logic here
-                              }}
-                              disabled={job.applied}
-                              className={cn(
-                                "px-5 py-2.5 rounded-xl font-bold text-sm transition-all",
-                                job.applied 
-                                  ? "bg-white/5 text-slate-500 border border-white/10 cursor-not-allowed" 
-                                  : "bg-gradient-to-r from-blue-500/20 to-indigo-500/20 text-blue-400 border border-blue-500/30 hover:border-blue-500/50"
-                              )}
-                            >
-                              {job.applied ? "Done" : "Apply Now"}
-                            </motion.button>
-                          </div>
-                        </motion.div>
-                      ))
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </main>
       </div>
