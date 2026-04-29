@@ -1,4 +1,5 @@
 import './globals.css';
+import './styles.css';
 
 export const metadata = {
   title: 'Job Apply Agent Pro',
@@ -8,7 +9,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className="dark">
-      <body className="antialiased bg-slate-950 text-slate-200">
+      <body className="antialiased" style={{ backgroundColor: 'rgb(2, 6, 23)', color: 'rgb(226, 232, 240)' }}>
         {children}
       </body>
     </html>
