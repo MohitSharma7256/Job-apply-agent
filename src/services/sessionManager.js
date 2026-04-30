@@ -1,5 +1,5 @@
-const { supabase } = require('./dbService');
-const { encrypt, decrypt } = require('../lib/encryption');
+import { supabase } from './dbService';
+import { encrypt, decrypt } from '../lib/encryption';
 
 class LoginManager {
   async saveSession(userId, platform, sessionData) {
@@ -57,4 +57,4 @@ class LoginManager {
   }
 }
 
-module.exports = { loginManager: new LoginManager() };
+export const loginManager = new LoginManager();

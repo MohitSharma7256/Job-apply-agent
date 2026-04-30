@@ -1,4 +1,4 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || '');
 
@@ -44,4 +44,4 @@ class AIService {
   }
 }
 
-module.exports = { aiService: new AIService() };
+export const aiService = new AIService();

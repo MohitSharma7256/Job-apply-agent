@@ -1,10 +1,10 @@
-const crypto = require('crypto');
+import crypto from 'crypto';
 
 const ALGORITHM = 'aes-256-cbc';
 const SECRET_KEY = process.env.SESSION_SECRET || 'v3ry_s3cr3t_k3y_32_ch4rs_l3ngth_!!!';
 const IV_LENGTH = 16;
 
-function encrypt(text) {
+export function encrypt(text) {
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv(ALGORITHM, Buffer.from(SECRET_KEY), iv);
   let encrypted = cipher.update(text);
@@ -12,7 +12,7 @@ function encrypt(text) {
   return iv.toString('hex') + ':' + encrypted.toString('hex');
 }
 
-function decrypt(text) {
+export function decrypt(text) {
   const textParts = text.split(':');
   const iv = Buffer.from(textParts.shift(), 'hex');
   const encryptedText = Buffer.from(textParts.join(':'), 'hex');
@@ -21,5 +21,3 @@ function decrypt(text) {
   decrypted = Buffer.concat([decrypted, decipher.final()]);
   return decrypted.toString();
 }
-
-module.exports = { encrypt, decrypt };

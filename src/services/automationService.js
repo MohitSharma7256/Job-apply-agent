@@ -1,5 +1,5 @@
-const { chromium } = require('playwright');
-const { loginManager } = require('./sessionManager');
+import { chromium } from 'playwright';
+import { loginManager } from './sessionManager';
 
 class AutomationService {
   async runAutomation(job, profile, autoReferral = true) {
@@ -66,4 +66,4 @@ class AutomationService {
   }
 }
 
-module.exports = { automationService: new AutomationService() };
+export const automationService = new AutomationService();

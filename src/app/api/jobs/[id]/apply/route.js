@@ -1,5 +1,5 @@
-const { supabase } = require('../../../../services/dbService');
-const { automationService } = require('../../../../services/automationService');
+import { supabase } from '../../../../../services/dbService';
+import { automationService } from '../../../../../services/automationService';
 
 export const runtime = 'nodejs';
 
