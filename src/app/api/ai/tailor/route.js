@@ -1,26 +1,25 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { aiService } from '@/services/aiService';
+const { aiService } = require('../../../../services/aiService');
 
 export const runtime = 'nodejs';
 
-export async function POST(request: NextRequest) {
+export async function POST(request) {
   try {
     const { job, profile } = await request.json();
 
     if (!job || !profile) {
-      return NextResponse.json({ error: 'Job and Profile required' }, { status: 400 });
+      return Response.json({ error: 'Job and Profile required' }, { status: 400 });
     }
 
     const tailoredContent = await aiService.tailorResume(profile.resumeText, job.description);
     const coverLetter = await aiService.generateCoverLetter(profile.resumeText, job.description);
 
-    return NextResponse.json({
+    return Response.json({
       success: true,
       tailoredContent,
       coverLetter,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('AI Tailoring error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return Response.json({ error: error.message }, { status: 500 });
   }
 }

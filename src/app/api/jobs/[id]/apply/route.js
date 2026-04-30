@@ -1,5 +1,5 @@
-const { supabase } = require('@/services/dbService');
-const { automationService } = require('@/services/automationService');
+const { supabase } = require('../../../../services/dbService');
+const { automationService } = require('../../../../services/automationService');
 
 export const runtime = 'nodejs';
 
@@ -18,7 +18,6 @@ export async function POST(request, { params }) {
       return Response.json({ error: 'Job not found' }, { status: 404 });
     }
 
-    // Trigger automation in background (or await for now)
     const result = await automationService.runAutomation(job, profile, autoReferral);
 
     return Response.json({ 
