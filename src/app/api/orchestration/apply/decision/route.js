@@ -1,4 +1,5 @@
-import { withRequestContext, validateRequest } from '@/shared/context.js';
+import { withRequestContext } from '@/shared/context.js';
+import { validateRequest } from '@/shared/schemas.js';
 import { successResponse, ValidationError } from '@/shared/errors.js';
 import { applyModeManager } from '@/orchestration/safety/apply-modes.js';
 

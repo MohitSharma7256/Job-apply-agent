@@ -1,4 +1,5 @@
-import { withRequestContext, validateRequest } from '@/shared/context.js';
+import { withRequestContext } from '@/shared/context.js';
+import { validateRequest } from '@/shared/schemas.js';
 import { successResponse, ValidationError } from '@/shared/errors.js';
 import { atsValidator } from '@/intelligence/personalization/ats-validator.js';
 import { ATSValidationRequestSchema } from '@/intelligence/personalization/ats-validator.js';

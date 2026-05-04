@@ -1,4 +1,5 @@
-import { withRequestContext, validateRequest } from '@/shared/context.js';
+import { withRequestContext } from '@/shared/context.js';
+import { validateRequest } from '@/shared/schemas.js';
 import { successResponse, ValidationError } from '@/shared/errors.js';
 import { coverLetterGenerator } from '@/intelligence/personalization/cover-letter.js';
 import { CoverLetterRequestSchema } from '@/intelligence/personalization/cover-letter.js';

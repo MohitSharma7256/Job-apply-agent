@@ -1,7 +1,7 @@
-import { withRequestContext, validateRequest } from '@/shared/context.js';
+import { withRequestContext } from '@/shared/context.js';
+import { validateRequest } from '@/shared/schemas.js';
 import { successResponse, ValidationError } from '@/shared/errors.js';
-import { orchestrator } from '@/orchestration/orchestrator.js';
-import { IntentSchema } from '@/orchestration/orchestrator.js';
+import { orchestrator, IntentSchema } from '@/orchestration/orchestrator.js';
 
 export const POST = withRequestContext(async (request) => {
   try {

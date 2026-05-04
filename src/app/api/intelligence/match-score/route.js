@@ -1,4 +1,5 @@
-import { withRequestContext, validateRequest } from '@/shared/context.js';
+import { withRequestContext } from '@/shared/context.js';
+import { validateRequest } from '@/shared/schemas.js';
 import { successResponse, ValidationError } from '@/shared/errors.js';
 import { matchScoringEngine } from '@/intelligence/match-scoring/scoring-engine.js';
 import { UserProfileSchema, JobPostingSchema } from '@/intelligence/match-scoring/scoring-engine.js';
