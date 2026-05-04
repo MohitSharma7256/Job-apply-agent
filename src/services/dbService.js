@@ -1,15 +1,25 @@
 import { createClient } from '@supabase/supabase-js';
 import { env } from '../shared/env.js';
 
+// Safe client creation helper
+function createSafeClient(url, key, name) {
+  try {
+    if (!url || !key || url === "" || key === "") {
+      console.warn(`⚠️ Supabase ${name} keys missing or empty. URL: ${url ? 'present' : 'missing'}`);
+      return null;
+    }
+    return createClient(url, key);
+  } catch (e) {
+    console.error(`❌ Failed to initialize Supabase ${name}:`, e.message);
+    return null;
+  }
+}
+
 // Create Supabase client with service role key for admin operations
-export const supabase = (env.NEXT_PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) 
-  ? createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY)
-  : null;
+export const supabase = createSafeClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, 'Admin');
 
 // Create Supabase client for user operations (uses RLS)
-export const supabaseClient = (env.NEXT_PUBLIC_SUPABASE_URL && env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-  ? createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-  : null;
+export const supabaseClient = createSafeClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, 'User');
 
 class DbService {
   // User Profile operations

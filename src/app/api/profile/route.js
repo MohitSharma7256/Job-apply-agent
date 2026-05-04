@@ -16,10 +16,9 @@ export async function GET(request) {
     });
 
   } catch (error) {
-    console.error('Profile API Error:', error);
     return NextResponse.json({
       success: false,
-      error: 'Failed to load profile'
+      error: error.message || 'Failed to load profile'
     }, { status: 500 });
   }
 }
