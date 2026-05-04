@@ -1,28 +1,18 @@
 import { NextResponse } from 'next/server';
+import { dbService } from '@/services/dbService';
 
 export async function GET(request) {
   try {
-    // Mock profile data - replace with actual database logic
-    const mockProfile = {
-      name: "John Doe",
-      email: "john.doe@example.com",
-      phone: "+91 9876543210",
-      location: "Bangalore, India",
-      resumeUrl: "",
-      resumeText: "",
-      skills: ["React", "Node.js", "TypeScript", "Python"],
-      experience: 5,
-      education: "Bachelor of Engineering",
-      targetRoles: ["Senior Developer", "Tech Lead"],
-      targetLocations: ["Bangalore", "Remote"],
-      targetSalary: 1500000,
-      experienceLevel: "mid",
-      preferredJobTypes: ["full-time"]
-    };
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId') || 'default-user'; // Replace with auth logic
+
+    const { data: profile, error } = await dbService.getProfile(userId);
+    
+    if (error) throw error;
 
     return NextResponse.json({
       success: true,
-      profile: mockProfile
+      profile: profile || {}
     });
 
   } catch (error) {
@@ -37,13 +27,16 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const profileData = await request.json();
+    const userId = profileData.id || 'default-user'; // Replace with auth logic
     
-    // Mock save logic - replace with actual database save
-    console.log('Saving profile:', profileData);
+    const { data, error } = await dbService.updateProfile(userId, profileData);
+    
+    if (error) throw error;
 
     return NextResponse.json({
       success: true,
-      message: 'Profile saved successfully'
+      message: 'Profile saved successfully',
+      data
     });
 
   } catch (error) {

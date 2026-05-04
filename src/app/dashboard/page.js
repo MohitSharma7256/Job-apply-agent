@@ -22,9 +22,44 @@ export default function Dashboard() {
   const [searchParams, setSearchParams] = useState({
     keywords: "",
     locations: [],
-    platforms: ["linkedin", "naukri"]
+    platforms: ["linkedin", "naukri"],
+    targetRoles: []
   });
   const [toast, setToast] = useState(null);
+
+  // Fetch initial jobs from DB
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const response = await fetch('/api/jobs/list');
+        const data = await response.json();
+        if (data.success) {
+          setJobs(data.jobs);
+        }
+      } catch (error) {
+        console.error('Failed to fetch jobs:', error);
+      }
+    };
+
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch('/api/profile');
+        const data = await response.json();
+        if (data.success && data.profile) {
+          setSearchParams(prev => ({
+            ...prev,
+            targetRoles: data.profile.targetRoles || [],
+            keywords: data.profile.targetRoles?.[0] || prev.keywords
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch profile:', error);
+      }
+    };
+
+    fetchJobs();
+    fetchProfile();
+  }, []);
 
   const dashboardModules = [
     { id: "profile", title: "Profile", description: "Manage personal details and target roles", href: "/dashboard/profile", icon: User },
@@ -131,6 +166,24 @@ export default function Dashboard() {
                   ))}
                 </div>
               </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Target Roles</label>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {searchParams.targetRoles.map((role, idx) => (
+                    <span 
+                      key={idx} 
+                      className="px-2 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-bold cursor-pointer hover:bg-blue-500/20 transition-all"
+                      onClick={() => setSearchParams({...searchParams, keywords: role})}
+                    >
+                      {role}
+                    </span>
+                  ))}
+                  <Link href="/dashboard/profile" className="px-2 py-1 rounded-md border border-dashed border-white/20 text-slate-500 hover:text-white transition-all text-[10px] font-bold">
+                    + Edit
+                  </Link>
+                </div>
+              </div>
+
               <button 
                 onClick={handleSearch}
                 disabled={isSearching}

@@ -1,28 +1,60 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User, Mail, Phone, Briefcase, MapPin, Save, Loader2, Target, Plus, X, Zap } from "lucide-react";
 
 export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState({
-    name: "Mohit Sharma",
-    email: "mohit@example.com",
-    phone: "+91 98765 43210",
-    location: "New Delhi, India",
-    currentRole: "Full Stack Developer",
-    experience: "5 Years",
-    targetRoles: ["Senior Full Stack Developer", "Backend Architect"],
-    skills: ["React", "Node.js", "Next.js", "Redis", "BullMQ", "PostgreSQL"],
-    bio: "Passionate developer building AI-first automation tools for the modern workforce."
+    name: "",
+    email: "",
+    phone: "",
+    location: "",
+    currentRole: "",
+    experience: "",
+    targetRoles: [],
+    skills: [],
+    bio: ""
   });
 
-  const handleSave = () => {
+  // Fetch profile on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch('/api/profile');
+        const data = await response.json();
+        if (data.success && data.profile) {
+          setProfile(prev => ({
+            ...prev,
+            ...data.profile
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch profile:', error);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleSave = async () => {
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profile)
+      });
+      if (response.ok) {
+        alert("Profile updated successfully!");
+      } else {
+        throw new Error('Save failed');
+      }
+    } catch (error) {
+      console.error('Save failed:', error);
+      alert("Failed to update profile");
+    } finally {
       setLoading(false);
-      alert("Profile updated successfully!");
-    }, 1500);
+    }
   };
 
   return (
