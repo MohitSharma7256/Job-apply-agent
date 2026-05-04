@@ -4,6 +4,8 @@ import { successResponse, ValidationError } from '@/shared/errors.js';
 import { coverLetterGenerator } from '@/intelligence/personalization/cover-letter.js';
 import { CoverLetterRequestSchema } from '@/intelligence/personalization/cover-letter.js';
 
+// Build trigger: 2026-05-04 15:18:30联想
+
 export const POST = withRequestContext(async (request) => {
   try {
     // Check feature flag
