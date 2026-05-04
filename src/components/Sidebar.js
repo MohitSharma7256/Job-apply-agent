@@ -35,9 +35,9 @@ export function Sidebar({ isOpen, setIsOpen }) {
 
       {/* Sidebar Content */}
       <aside className={cn(
-        "h-screen bg-slate-950 flex flex-col p-6 z-[60] transition-transform duration-300 w-72",
-        // Mobile Drawer logic
-        "fixed top-0 left-0 lg:static lg:translate-x-0",
+        "h-full bg-slate-950 flex flex-col p-6 z-[60] transition-transform duration-300 w-72",
+        // Mobile Drawer logic: Fixed on mobile, static on desktop
+        "fixed lg:static top-0 left-0",
         !isOpen && "-translate-x-full lg:translate-x-0"
       )}>
         {/* Mobile Close Button */}
