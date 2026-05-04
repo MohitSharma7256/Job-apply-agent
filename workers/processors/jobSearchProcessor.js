@@ -1,5 +1,5 @@
-import { jobScoringService } from '../../services/jobScoringService.js';
-import { dbService } from '../../services/dbService.js';
+import { jobScoringService } from '../../src/services/jobScoringService.js';
+import { dbService } from '../../src/services/dbService.js';
 import { emitJobEvent, EVENT_TYPES } from '../../src/shared/events.js';
 
 export async function processJobSearch(jobData) {

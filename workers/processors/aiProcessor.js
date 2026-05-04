@@ -1,4 +1,4 @@
-import { aiService } from '../../services/aiService.js';
+import { aiService } from '../../src/services/aiService.js';
 
 export async function processAIRequest(jobData) {
   const { userId, type, input, options, idempotencyKey } = jobData;

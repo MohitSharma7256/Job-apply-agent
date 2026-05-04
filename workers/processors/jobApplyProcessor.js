@@ -1,4 +1,4 @@
-import { dbService } from '../../services/dbService.js';
+import { dbService } from '../../src/services/dbService.js';
 import { processWebAutomation } from './webAutomationProcessor.js';
 
 export async function processJobApply(jobData) {
