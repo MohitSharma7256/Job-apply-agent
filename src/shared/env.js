@@ -40,6 +40,13 @@ export function validateEnv() {
     console.error('❌ Environment validation failed:');
     console.error(error.errors?.map(e => `- ${e.path.join('.')}: ${e.message}`).join('\n'));
     console.error('\nPlease check your .env file and ensure all required variables are set.');
+    
+    // Don't exit during build phase or production to allow deployment to proceed
+    if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.NODE_ENV === 'production') {
+      console.warn('⚠️  Continuing despite missing environment variables. App may fail at runtime.');
+      return { success: false, env: process.env };
+    }
+    
     process.exit(1);
   }
 }
