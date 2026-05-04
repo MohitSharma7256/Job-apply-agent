@@ -1,4 +1,5 @@
-import { withCorrelationId, successResponse, withAuth } from '@/shared/errors';
+import { withCorrelationId, successResponse } from '@/shared/errors';
+import { withAuth } from '@/shared/auth';
 import { validateRequest, JobSearchSchema } from '@/shared/schemas';
 import { addJob, getJobInfo, QUEUES } from '@/shared/queue';
 import { v4 as uuidv4 } from 'uuid';

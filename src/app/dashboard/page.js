@@ -7,9 +7,9 @@ import {
   Send, Zap, MapPin, Upload, FileText, Trash2, TrendingUp, 
   Calendar, Clock, Award, Target, Sparkles, Rocket, Brain, Shield
 } from "lucide-react";
-import { SocketProvider, useSocket } from '../hooks/useSocket';
-import { JobProgressTracker } from '../components/JobProgressTracker';
-import { NotificationCenter, NotificationContainer } from '../components/NotificationCenter';
+import { SocketProvider, useSocket } from '@/hooks/useSocket';
+import { JobProgressTracker } from '@/components/JobProgressTracker';
+import { NotificationCenter, NotificationContainer } from '@/components/NotificationCenter';
 
 const PLATFORMS = [
   { id: "naukri", name: "Naukri.com", icon: "📋", color: "from-blue-500 to-blue-600" },

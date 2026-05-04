@@ -1,4 +1,5 @@
-import { withCorrelationId, successResponse, withAuth, ValidationError } from '@/shared/errors';
+import { withCorrelationId, successResponse, ValidationError } from '@/shared/errors';
+import { withAuth } from '@/shared/auth';
 import { validateRequest, JobApplySchema } from '@/shared/schemas';
 import { addJob, getJobInfo, QUEUES } from '@/shared/queue';
 import { dbService } from '../../../../../services/dbService.js';

@@ -1,4 +1,5 @@
-import { withCorrelationId, successResponse, withAuth, requireRole } from '@/shared/errors';
+import { withCorrelationId, successResponse } from '@/shared/errors';
+import { withAuth, requireRole } from '@/shared/auth';
 import { getQueueStats, QUEUES } from '@/shared/queue';
 
 export const GET = withCorrelationId(withAuth(requireRole('admin')(async (request) => {

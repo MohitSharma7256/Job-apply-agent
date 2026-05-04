@@ -1,4 +1,5 @@
-import { withCorrelationId, successResponse, withAuth, ValidationError } from '@/shared/errors';
+import { withCorrelationId, successResponse, ValidationError } from '@/shared/errors';
+import { withAuth } from '@/shared/auth';
 import { getJobInfo, retryJob, cancelJob } from '@/shared/queue';
 
 export const GET = withCorrelationId(withAuth(async (request, { params }) => {
