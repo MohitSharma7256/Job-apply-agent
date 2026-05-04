@@ -1,5 +1,5 @@
 import { Worker } from 'bullmq';
-import { redisConnection, QUEUES } from '../src/shared/queue.js';
+import { redisConnection, createConnection, QUEUES } from '../src/shared/queue.js';
 import { JobTracker } from '../src/shared/queue.js';
 import { processJobSearch } from './processors/jobSearchProcessor.js';
 import { processResumeTailor } from './processors/resumeTailorProcessor.js';
@@ -52,7 +52,7 @@ workers[QUEUES.JOB_SEARCH] = new Worker(
     }
   },
   {
-    connection: redisConnection,
+    connection: createConnection(),
     concurrency: workerConfig.concurrency[QUEUES.JOB_SEARCH],
   }
 );
@@ -84,7 +84,7 @@ workers[QUEUES.RESUME_TAILOR] = new Worker(
     }
   },
   {
-    connection: redisConnection,
+    connection: createConnection(),
     concurrency: workerConfig.concurrency[QUEUES.RESUME_TAILOR],
   }
 );
@@ -116,7 +116,7 @@ workers[QUEUES.JOB_APPLY] = new Worker(
     }
   },
   {
-    connection: redisConnection,
+    connection: createConnection(),
     concurrency: workerConfig.concurrency[QUEUES.JOB_APPLY],
   }
 );
@@ -148,7 +148,7 @@ workers[QUEUES.AI_PROCESSING] = new Worker(
     }
   },
   {
-    connection: redisConnection,
+    connection: createConnection(),
     concurrency: workerConfig.concurrency[QUEUES.AI_PROCESSING],
   }
 );
@@ -180,7 +180,7 @@ workers[QUEUES.WEB_AUTOMATION] = new Worker(
     }
   },
   {
-    connection: redisConnection,
+    connection: createConnection(),
     concurrency: workerConfig.concurrency[QUEUES.WEB_AUTOMATION],
   }
 );

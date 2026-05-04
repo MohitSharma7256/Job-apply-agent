@@ -19,7 +19,7 @@ const getRedisConnection = () => {
   };
 };
 
-const redisConnection = getRedisConnection();
+export const redisConnection = getRedisConnection();
 
 // Connection options
 const redisOptions = {
@@ -28,7 +28,7 @@ const redisOptions = {
 };
 
 // Create connection function
-const createConnection = () => {
+export const createConnection = () => {
   if (typeof redisConnection === 'string') {
     return new Redis(redisConnection, redisOptions);
   }
