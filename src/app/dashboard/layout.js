@@ -1,40 +1,28 @@
 "use client";
 
-import { useState } from 'react';
 import { Sidebar } from '@/components/Sidebar';
-import { Menu, Zap } from 'lucide-react';
 
 export default function DashboardLayout({ children }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
   return (
-    <div className="flex min-h-screen bg-slate-950 overflow-x-hidden">
-      {/* Desktop Sidebar - Always visible, pushes content */}
-      <div className="hidden lg:block w-72 min-w-[288px] flex-shrink-0 border-r border-white/10 h-screen sticky top-0 bg-slate-950">
-        <Sidebar isOpen={false} setIsOpen={() => {}} />
-      </div>
+    <div className="flex min-h-screen bg-slate-950 text-slate-200">
+      {/* Sidebar - Responsive */}
+      <Sidebar />
 
-      {/* Mobile Sidebar - Hidden by default, slides over content */}
-      <div className="lg:hidden">
-        <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
-      </div>
-
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile Header - Only on small screens */}
-        <header className="lg:hidden h-16 border-b border-white/10 bg-slate-950 flex items-center justify-between px-6 sticky top-0 z-[50]">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen lg:ml-0">
+        {/* Mobile Header - Hidden since sidebar has menu button */}
+        <header className="lg:hidden h-16 border-b border-white/10 bg-slate-950 flex items-center justify-center px-6 sticky top-0 z-30">
           <div className="flex items-center gap-2">
-            <Zap className="w-6 h-6 text-blue-500" />
-            <span className="font-black text-white">Agent Pro</span>
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              <svg className="h-5 w-5 text-white fill-current" viewBox="0 0 24 24">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
+            </div>
+            <span className="font-black text-white text-lg">Agent Pro</span>
           </div>
-          <button 
-            onClick={() => setIsSidebarOpen(true)}
-            className="p-2 text-slate-400 hover:text-white"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
         </header>
 
-        {/* Page Content */}
+        {/* Dashboard Pages */}
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>

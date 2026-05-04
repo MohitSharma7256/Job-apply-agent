@@ -2,11 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
 import {
-  Search, Loader2, Rocket, Brain, User, FileText, History, BarChart3, ArrowRight, Table, Sparkles
+  Search, Loader2, Rocket, Brain, User, FileText, History, BarChart3, ArrowRight, Table, Sparkles, Menu, X
 } from "lucide-react";
-import { JobProgressTracker } from "@/components/JobProgressTracker";
 
 const PLATFORMS = [
   { id: "naukri", name: "Naukri.com", icon: "📋", color: "from-blue-500 to-blue-600" },
@@ -49,7 +47,7 @@ export default function Dashboard() {
           setSearchParams(prev => ({
             ...prev,
             targetRoles: data.profile.targetRoles || [],
-            keywords: data.profile.targetRoles?.[0] || prev.keywords
+            locations: data.profile.locations || []
           }));
         }
       } catch (error) {
@@ -61,22 +59,9 @@ export default function Dashboard() {
     fetchProfile();
   }, []);
 
-  const dashboardModules = [
-    { id: "profile", title: "Profile", description: "Manage personal details and target roles", href: "/dashboard/profile", icon: User },
-    { id: "resume", title: "Resume", description: "Base resume first, optional cover letters", href: "/dashboard/resume", icon: FileText },
-    { id: "apply-log", title: "Apply log", description: "Excel-style row per apply (resume / CL / salary / mode)", href: "/dashboard/applications", icon: Table },
-    { id: "activity", title: "Activity", description: "Searches, tailoring, automation timeline", href: "/dashboard/history", icon: History },
-    { id: "analytics", title: "Analytics", description: "Views conversion-style summaries", href: "/dashboard/analytics", icon: BarChart3 },
-  ];
-
-  const showToast = (message, type) => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
-
   const handleSearch = async () => {
-    if (!searchParams.keywords) {
-      showToast("Please enter keywords", "error");
+    if (!searchParams.keywords.trim()) {
+      setToast({ type: 'error', message: 'Please enter job keywords' });
       return;
     }
 
@@ -85,207 +70,247 @@ export default function Dashboard() {
       const response = await fetch('/api/jobs/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...searchParams,
-          maxResults: 10
-        })
+        body: JSON.stringify(searchParams)
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setActiveJobId(data.data.jobId);
-        showToast("Job search queued successfully", "success");
+      
+      const data = await response.json();
+      if (data.success) {
+        setJobs(data.jobs);
+        setToast({ type: 'success', message: `Found ${data.jobs.length} jobs` });
       } else {
-        throw new Error('Search failed');
+        setToast({ type: 'error', message: data.error || 'Search failed' });
       }
     } catch (error) {
-      console.error('Search failed:', error);
-      showToast("Failed to start search", "error");
+      setToast({ type: 'error', message: 'Search failed. Please try again.' });
+    } finally {
       setIsSearching(false);
     }
   };
 
-  const handleJobComplete = (results) => {
-    if (results?.jobs) {
-      setJobs(results.jobs);
-    }
-    setIsSearching(false);
-    setActiveJobId(null);
-    showToast(`Found ${results?.jobs?.length || 0} matching jobs`, "success");
-  };
-
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8">
-      {/* Content Header */}
-      <header className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 md:mb-12 gap-4">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-black text-white">Dashboard</h1>
-          <p className="text-slate-500 mt-2 text-sm md:text-base">Welcome back! Here&apos;s what&apos;s happening with your applications.</p>
+    <div className="min-h-screen bg-slate-950 text-slate-200">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
+          toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+        } text-white max-w-sm mx-4 lg:mx-0`}>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">{toast.message}</span>
+            <button 
+              onClick={() => setToast(null)}
+              className="ml-4 text-white hover:text-slate-200"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
-      </header>
+      )}
 
-      {/* Main Grid */}
-      <div className="grid lg:grid-cols-3 gap-8">
-        {/* Search Config */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl">
-            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <Search className="w-5 h-5 text-blue-400" /> Search Params
-            </h2>
-            <div className="space-y-4">
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Keywords</label>
-                <input 
-                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-blue-500/50 transition-all text-white"
-                  placeholder="React, Node, Remote..."
+      {/* Header */}
+      <div className="px-4 lg:px-8 py-6 lg:py-8">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-black text-white mb-2">Job Search Dashboard</h1>
+            <p className="text-slate-400 text-sm lg:text-base">Find and apply to jobs across multiple platforms</p>
+          </div>
+          <div className="flex items-center gap-2 lg:gap-4">
+            <Link href="/dashboard/history">
+              <button className="px-3 lg:px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors text-sm lg:text-base flex items-center gap-2">
+                <History className="w-4 h-4" />
+                <span className="hidden sm:inline">History</span>
+              </button>
+            </Link>
+            <Link href="/dashboard/analytics">
+              <button className="px-3 lg:px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-sm lg:text-base flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                <span className="hidden sm:inline">Analytics</span>
+              </button>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Search Section */}
+      <div className="px-4 lg:px-8 pb-6 lg:pb-8">
+        <div className="bg-slate-900 rounded-xl lg:rounded-2xl border border-white/10 p-4 lg:p-6">
+          {/* Search Input */}
+          <div className="flex flex-col lg:flex-row gap-4 mb-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4 lg:w-5 lg:h-5" />
+                <input
+                  type="text"
+                  placeholder="Search for jobs (e.g., 'Software Engineer', 'Product Manager')"
                   value={searchParams.keywords}
-                  onChange={e => setSearchParams({...searchParams, keywords: e.target.value})}
+                  onChange={(e) => setSearchParams(prev => ({ ...prev, keywords: e.target.value }))}
+                  className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-white/10 rounded-lg focus:outline-none focus:border-blue-500 text-sm lg:text-base"
                 />
               </div>
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Platforms</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {PLATFORMS.map(p => (
-                    <button 
-                      key={p.id} 
-                      onClick={() => {
-                        const newPlatforms = searchParams.platforms.includes(p.id)
-                          ? searchParams.platforms.filter(id => id !== p.id)
-                          : [...searchParams.platforms, p.id];
-                        setSearchParams({...searchParams, platforms: newPlatforms});
-                      }}
-                      className={cn(
-                        "flex items-center gap-2 p-3 rounded-xl border transition-all text-xs font-medium",
-                        searchParams.platforms.includes(p.id) 
-                          ? "bg-blue-500/10 border-blue-500/30 text-blue-400" 
-                          : "bg-white/5 border-white/5 text-slate-400"
-                      )}
-                    >
-                      <span>{p.icon}</span> {p.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Target Roles</label>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {searchParams.targetRoles.map((role, idx) => (
-                    <span 
-                      key={idx} 
-                      className="px-2 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-bold cursor-pointer hover:bg-blue-500/20 transition-all"
-                      onClick={() => setSearchParams({...searchParams, keywords: role})}
-                    >
-                      {role}
-                    </span>
-                  ))}
-                  <Link href="/dashboard/profile" className="px-2 py-1 rounded-md border border-dashed border-white/20 text-slate-500 hover:text-white transition-all text-[10px] font-bold">
-                    + Edit
-                  </Link>
-                </div>
-              </div>
+            </div>
+            <button
+              onClick={handleSearch}
+              disabled={isSearching}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 rounded-lg transition-colors font-medium text-sm lg:text-base flex items-center justify-center gap-2 min-h-[48px]"
+            >
+              {isSearching ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Searching...
+                </>
+              ) : (
+                <>
+                  <Search className="w-4 h-4" />
+                  Search Jobs
+                </>
+              )}
+            </button>
+          </div>
 
-              <button 
-                onClick={handleSearch}
-                disabled={isSearching}
-                className="w-full py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 font-bold shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2"
-              >
-                {isSearching ? <Loader2 className="w-5 h-5 animate-spin" /> : <Rocket className="w-5 h-5" />}
-                {isSearching ? "Searching..." : "Launch Search"}
-              </button>
+          {/* Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Platforms */}
+            <div>
+              <label className="block text-xs lg:text-sm font-medium text-slate-400 mb-2">Platforms</label>
+              <div className="flex flex-wrap gap-2">
+                {PLATFORMS.map(platform => (
+                  <button
+                    key={platform.id}
+                    onClick={() => {
+                      setSearchParams(prev => ({
+                        ...prev,
+                        platforms: prev.platforms.includes(platform.id)
+                          ? prev.platforms.filter(p => p !== platform.id)
+                          : [...prev.platforms, platform.id]
+                      }));
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs lg:text-sm transition-colors ${
+                      searchParams.platforms.includes(platform.id)
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                    }`}
+                  >
+                    {platform.icon} {platform.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Locations */}
+            <div>
+              <label className="block text-xs lg:text-sm font-medium text-slate-400 mb-2">Locations</label>
+              <input
+                type="text"
+                placeholder="e.g., Mumbai, Bangalore, Remote"
+                value={searchParams.locations.join(', ')}
+                onChange={(e) => setSearchParams(prev => ({
+                  ...prev,
+                  locations: e.target.value.split(',').map(loc => loc.trim()).filter(Boolean)
+                }))}
+                className="w-full px-3 py-2 bg-slate-800 border border-white/10 rounded-lg focus:outline-none focus:border-blue-500 text-sm lg:text-base"
+              />
+            </div>
+
+            {/* Target Roles */}
+            <div>
+              <label className="block text-xs lg:text-sm font-medium text-slate-400 mb-2">Target Roles</label>
+              <input
+                type="text"
+                placeholder="e.g., Frontend, Backend, Full Stack"
+                value={searchParams.targetRoles.join(', ')}
+                onChange={(e) => setSearchParams(prev => ({
+                  ...prev,
+                  targetRoles: e.target.value.split(',').map(role => role.trim()).filter(Boolean)
+                }))}
+                className="w-full px-3 py-2 bg-slate-800 border border-white/10 rounded-lg focus:outline-none focus:border-blue-500 text-sm lg:text-base"
+              />
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Results List */}
-        <div className="lg:col-span-2 space-y-4">
-          {activeJobId && (
-            <div className="mb-8">
-              <JobProgressTracker 
-                jobId={activeJobId} 
-                onComplete={handleJobComplete}
-              />
-            </div>
+      {/* Jobs List */}
+      <div className="px-4 lg:px-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg lg:text-xl font-bold text-white">
+            {jobs.length > 0 ? `Found ${jobs.length} Jobs` : 'Recent Jobs'}
+          </h2>
+          {jobs.length > 0 && (
+            <button className="text-blue-400 hover:text-blue-300 text-sm lg:text-base">
+              Clear All
+            </button>
           )}
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">Recommended for you</h2>
-            <div className="flex gap-2">
-              <button className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-bold hover:bg-white/10 transition-all">Score</button>
-              <button className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-bold hover:bg-white/10 transition-all">Newest</button>
-            </div>
-          </div>
+        </div>
 
-          <div className="space-y-4">
+        {jobs.length === 0 ? (
+          <div className="bg-slate-900 rounded-xl lg:rounded-2xl border border-white/10 p-8 lg:p-12 text-center">
+            <div className="w-16 h-16 lg:w-20 lg:h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Search className="w-8 h-8 lg:w-10 lg:h-10 text-slate-400" />
+            </div>
+            <h3 className="text-lg lg:text-xl font-bold text-white mb-2">No Jobs Found</h3>
+            <p className="text-slate-400 text-sm lg:text-base mb-6">
+              Start by searching for jobs with keywords and filters above
+            </p>
+            <button
+              onClick={handleSearch}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors font-medium text-sm lg:text-base inline-flex items-center gap-2"
+            >
+              <Rocket className="w-4 h-4" />
+              Find Jobs
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
             {jobs.map(job => (
-              <div key={job.id} className="p-6 rounded-3xl bg-white/5 border border-white/10 hover:border-blue-500/30 transition-all group relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4">
-                  <div className="h-10 w-10 rounded-full border-2 border-white/5 flex items-center justify-center bg-black/40">
-                    <span className="text-xs font-black text-blue-400">{job.matchScore}%</span>
-                  </div>
-                </div>
-                <div className="flex flex-col md:flex-row gap-6">
-                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 flex items-center justify-center text-2xl shrink-0">
-                    {job.platform === 'linkedin' ? '💼' : job.platform === 'glassdoor' ? '💎' : '📋'}
-                  </div>
+              <div key={job.id} className="bg-slate-900 rounded-xl lg:rounded-2xl border border-white/10 p-4 lg:p-6 hover:border-blue-500/50 transition-colors">
+                <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors">{job.title}</h3>
-                    <p className="text-slate-400 text-sm font-medium">{job.company} • {job.location}</p>
-                    <div className="flex gap-2 mt-4">
-                      {job.skills.map(s => (
-                        <span key={s} className="px-2 py-1 rounded-md bg-white/5 text-[10px] font-bold text-slate-500 border border-white/5">{s}</span>
-                      ))}
+                    <h3 className="font-bold text-white text-sm lg:text-base mb-1">{job.title}</h3>
+                    <p className="text-slate-400 text-xs lg:text-sm mb-2">{job.company}</p>
+                    <div className="flex items-center gap-2 text-xs lg:text-sm text-slate-500">
+                      <span>{job.location}</span>
+                      <span>•</span>
+                      <span>{job.type}</span>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <button className="p-3 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-all">
-                      <Brain className="w-5 h-5" />
+                  <div className="w-8 h-8 lg:w-10 lg:h-10 bg-slate-800 rounded-lg flex items-center justify-center">
+                    <span className="text-lg">{PLATFORMS.find(p => p.id === job.platform)?.icon}</span>
+                  </div>
+                </div>
+                
+                <div className="flex flex-wrap gap-1 lg:gap-2 mb-4">
+                  {job.skills?.slice(0, 3).map(skill => (
+                    <span key={skill} className="px-2 py-1 bg-slate-800 text-slate-300 rounded text-xs">
+                      {skill}
+                    </span>
+                  ))}
+                  {job.skills?.length > 3 && (
+                    <span className="px-2 py-1 bg-slate-800 text-slate-500 rounded text-xs">
+                      +{job.skills.length - 3}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="text-xs lg:text-sm text-slate-500">
+                    {new Date(job.postedDate).toLocaleDateString()}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors text-xs lg:text-sm">
+                      Save
                     </button>
-                    <button className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-bold text-sm transition-all shadow-lg shadow-blue-600/10">
-                      Apply Now
+                    <button className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-xs lg:text-sm">
+                      Apply
                     </button>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Feature Modules */}
-      <section className="mt-12">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Explore all features</h2>
-          <p className="text-xs uppercase tracking-widest text-slate-500">Everything in one dashboard</p>
-        </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-          {dashboardModules.map((module) => {
-            const Icon = module.icon;
-            return (
-              <Link
-                key={module.id}
-                href={module.href}
-                className="group rounded-3xl border border-white/10 bg-white/5 p-5 hover:border-blue-500/40 hover:bg-white/[0.07] transition-all"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="h-11 w-11 rounded-xl bg-blue-500/15 border border-blue-500/20 flex items-center justify-center">
-                    <Icon className="w-5 h-5 text-blue-400" />
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
-                </div>
-                <h3 className="font-bold text-white mb-2">{module.title}</h3>
-                <p className="text-sm text-slate-400">{module.description}</p>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Toast */}
-      {toast && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 px-6 py-3 rounded-2xl bg-white/10 backdrop-blur-2xl border border-white/20 shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4">
-          <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-          <span className="text-sm font-bold text-white">{toast.message}</span>
-        </div>
-      )}
+      {/* Bottom padding */}
+      <div className="h-8 lg:h-12"></div>
     </div>
   );
 }
