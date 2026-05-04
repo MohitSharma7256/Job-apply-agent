@@ -115,12 +115,12 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 p-8">
+    <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8">
       {/* Content Header */}
-      <header className="flex justify-between items-center mb-12">
+      <header className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 md:mb-12 gap-4">
         <div>
-          <h1 className="text-4xl font-black text-white">Dashboard</h1>
-          <p className="text-slate-500 mt-2">Welcome back! Here&apos;s what&apos;s happening with your applications.</p>
+          <h1 className="text-3xl md:text-4xl font-black text-white">Dashboard</h1>
+          <p className="text-slate-500 mt-2 text-sm md:text-base">Welcome back! Here&apos;s what&apos;s happening with your applications.</p>
         </div>
       </header>
 
@@ -222,8 +222,8 @@ export default function Dashboard() {
                     <span className="text-xs font-black text-blue-400">{job.matchScore}%</span>
                   </div>
                 </div>
-                <div className="flex gap-6">
-                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 flex items-center justify-center text-2xl">
+                <div className="flex flex-col md:flex-row gap-6">
+                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-white/10 flex items-center justify-center text-2xl shrink-0">
                     {job.platform === 'linkedin' ? '💼' : job.platform === 'glassdoor' ? '💎' : '📋'}
                   </div>
                   <div className="flex-1">

@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, User, FileText,
   BarChart3, Settings, LogOut, Zap,
-  ChevronRight, Sparkles, Layers, Table, History,
+  ChevronRight, Sparkles, Layers, Table, History, Menu, X as CloseIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { phasedFeatures, phasedFeaturesIntro } from '@/config/phasedFeatures';
@@ -24,7 +24,27 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-72 min-w-72 h-screen sticky top-0 bg-slate-950 border-r border-white/10 flex flex-col p-6 z-50">
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[55] lg:hidden"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      {/* Sidebar Content */}
+      <aside className={cn(
+        "fixed lg:sticky top-0 left-0 w-72 h-screen bg-slate-950 border-r border-white/10 flex flex-col p-6 z-[60] transition-transform duration-300",
+        isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      )}>
+        {/* Mobile Close Button */}
+        <button 
+          onClick={() => setIsOpen(false)}
+          className="lg:hidden absolute top-6 right-6 p-2 text-slate-400 hover:text-white"
+        >
+          <CloseIcon className="w-6 h-6" />
+        </button>
       {/* Brand */}
       <div className="flex items-center gap-3 mb-6 px-2 shrink-0">
         <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
@@ -116,6 +136,8 @@ export function Sidebar() {
           <span className="font-bold text-sm">Sign Out</span>
         </button>
       </div>
+      </div>
     </aside>
+    </>
   );
 }

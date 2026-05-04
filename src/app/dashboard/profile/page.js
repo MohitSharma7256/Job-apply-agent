@@ -95,21 +95,21 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
-      <header className="mb-12">
-        <h1 className="text-4xl font-black text-white">Your Profile</h1>
-        <p className="text-slate-500 mt-2">Manage your professional identity for AI tailoring.</p>
+    <div className="p-4 md:p-8 max-w-5xl mx-auto">
+      <header className="mb-8 md:mb-12">
+        <h1 className="text-3xl md:text-4xl font-black text-white">Your Profile</h1>
+        <p className="text-slate-500 mt-2 text-sm">Manage your professional identity for AI tailoring.</p>
       </header>
 
-      <div className="grid grid-cols-3 gap-8">
+      <div className="flex flex-col md:grid md:grid-cols-3 gap-8">
         {/* Basic Info */}
-        <div className="col-span-2 space-y-6">
-          <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl">
+        <div className="md:col-span-2 space-y-6">
+          <div className="p-6 md:p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl">
             <h2 className="text-xl font-bold mb-8 flex items-center gap-3">
               <User className="w-5 h-5 text-blue-400" /> Basic Information
             </h2>
             
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Full Name</label>
                 <div className="relative">
