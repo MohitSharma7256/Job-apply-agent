@@ -1,8 +1,11 @@
-require('dotenv').config();
-const { createServer } = require('http');
-const { parse } = require('url');
-const next = require('next');
-const { Server } = require('socket.io');
+import dotenv from 'dotenv';
+import { createServer } from 'http';
+import { parse } from 'url';
+import next from 'next';
+import { Server } from 'socket.io';
+import { cronService } from './src/services/cronService.js';
+
+dotenv.config();
 
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
@@ -29,9 +32,13 @@ app.prepare().then(() => {
     });
   });
 
+  // Start cron jobs to keep account active
+  cronService.startAll();
+
   const PORT = process.env.PORT || 3000;
   httpServer.listen(PORT, () => {
     console.log(`> Server listening on http://localhost:${PORT}`);
     console.log('> Server ready for production');
+    console.log('> Cron jobs started - account will stay active!');
   });
 });
