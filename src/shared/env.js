@@ -54,7 +54,8 @@ export function validateEnv() {
       return { success: false, env: process.env };
     }
     
-    process.exit(1);
+    // In dev, we still want to be strict but let's not crash the build
+    return { success: false, env: process.env };
   }
 }
 

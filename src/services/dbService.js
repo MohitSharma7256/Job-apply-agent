@@ -2,15 +2,22 @@ import { createClient } from '@supabase/supabase-js';
 import { env } from '../shared/env.js';
 
 // Create Supabase client with service role key for admin operations
-export const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+export const supabase = (env.NEXT_PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) 
+  ? createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY)
+  : null;
 
 // Create Supabase client for user operations (uses RLS)
-export const supabaseClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+export const supabaseClient = (env.NEXT_PUBLIC_SUPABASE_URL && env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  ? createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  : null;
 
 class DbService {
   // User Profile operations
   async getProfile(userId) {
     try {
+      if (!supabaseClient) {
+        throw new Error('Database client not initialized. Check your environment variables.');
+      }
       // Basic UUID validation regex
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(userId)) {
@@ -56,6 +63,9 @@ class DbService {
   // Job operations
   async getJobs(userId, limit = 100, offset = 0) {
     try {
+      if (!supabaseClient) {
+        throw new Error('Database client not initialized. Check your environment variables.');
+      }
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(userId)) {
         return { data: [], error: null };
