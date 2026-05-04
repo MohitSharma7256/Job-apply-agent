@@ -275,7 +275,7 @@ const ApprovalQueue = ({
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-white">Today's Approvals</h2>
+          <h2 className="text-2xl font-bold text-white">Today&apos;s Approvals</h2>
           <p className="text-gray-400 mt-1">
             {filteredApplications.length} application{filteredApplications.length !== 1 ? 's' : ''} pending review
           </p>

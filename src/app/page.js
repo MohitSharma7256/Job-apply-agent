@@ -261,7 +261,7 @@ export default function Home() {
               </span>
             </h2>
             <p className="text-xl text-slate-300 max-w-3xl mx-auto">
-              Join thousands who've landed their dream jobs with AI automation
+              Join thousands who&apos;ve landed their dream jobs with AI automation
             </p>
           </div>
 
@@ -275,7 +275,7 @@ export default function Home() {
                 </div>
                 
                 <p className="text-slate-200 mb-6 text-lg leading-relaxed group-hover:text-white transition-colors duration-300">
-                  "{testimonial.content}"
+                  &ldquo;{testimonial.content}&rdquo;
                 </p>
                 
                 <div className="flex items-center gap-4">
@@ -306,7 +306,7 @@ export default function Home() {
                 </span>
               </h2>
               <p className="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
-                Join thousands of professionals who've landed their dream jobs with AI automation
+                Join thousands of professionals who&apos;ve landed their dream jobs with AI automation
               </p>
               
               <Link 

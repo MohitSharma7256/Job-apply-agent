@@ -755,8 +755,8 @@ const AdvancedTab = ({ profile, editing, updateProfile }) => {
               <option value="">Select Degree</option>
               <option value="high-school">High School</option>
               <option value="associate">Associate Degree</option>
-              <option value="bachelor">Bachelor's Degree</option>
-              <option value="master">Master's Degree</option>
+              <option value="bachelor">Bachelor&apos;s Degree</option>
+              <option value="master">Master&apos;s Degree</option>
               <option value="phd">PhD</option>
               <option value="other">Other</option>
             </select>

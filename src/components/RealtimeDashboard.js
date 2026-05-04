@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSocket, useNotifications } from '../hooks/useSocket';
+import { SocketProvider, useSocket, useNotifications } from '../hooks/useSocket';
 import { JobProgressTracker, JobProgressList } from './JobProgressTracker';
 import { NotificationCenter } from './NotificationCenter';
 import { 
@@ -16,7 +16,7 @@ const PLATFORMS = [
 ];
 
 export function RealtimeDashboard() {
-  const { isConnected, connectionError, jobUpdates, notifications } = useSocket();
+  const { isConnected, connectionError, jobUpdates, notifications, subscribeToJob } = useSocket();
   const { unreadNotificationsCount } = useNotifications();
   const [activeJobs, setActiveJobs] = useState([]);
   const [searchParams, setSearchParams] = useState({
@@ -67,8 +67,6 @@ export function RealtimeDashboard() {
       
       if (result.success) {
         setCurrentJobId(result.data.jobId);
-        // Subscribe to job updates
-        const { subscribeToJob } = useSocket();
         subscribeToJob(result.data.jobId);
       } else {
         alert('Search failed: ' + result.error?.message);

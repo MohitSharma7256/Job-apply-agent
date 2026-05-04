@@ -98,7 +98,7 @@ export function NotificationCenter({ className = '' }) {
               <div className="p-8 text-center text-gray-500">
                 <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
                 <div>No notifications</div>
-                <div className="text-sm">You're all caught up!</div>
+                <div className="text-sm">You&apos;re all caught up!</div>
               </div>
             ) : (
               <div className="divide-y divide-gray-100">

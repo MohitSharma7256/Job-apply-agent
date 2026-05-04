@@ -165,7 +165,7 @@ const MatchScoreCard = ({
         </div>
         <p className="text-red-300 mb-4">{disqualifiedReason}</p>
         <div className="text-sm text-red-400">
-          This job doesn't match your preferences or requirements
+          This job doesn&apos;t match your preferences or requirements
         </div>
       </div>
     );
