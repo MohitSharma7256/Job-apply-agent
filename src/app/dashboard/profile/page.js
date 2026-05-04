@@ -42,7 +42,10 @@ export default function ProfilePage() {
       const response = await fetch('/api/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(profile)
+        body: JSON.stringify({
+          ...profile,
+          id: '00000000-0000-0000-0000-000000000000' // Use current mock ID
+        })
       });
       if (response.ok) {
         alert("Profile updated successfully!");
@@ -55,6 +58,40 @@ export default function ProfilePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const addTargetRole = () => {
+    const role = prompt("Enter target role:");
+    if (role) {
+      setProfile(prev => ({
+        ...prev,
+        targetRoles: [...prev.targetRoles, role]
+      }));
+    }
+  };
+
+  const removeTargetRole = (role) => {
+    setProfile(prev => ({
+      ...prev,
+      targetRoles: prev.targetRoles.filter(r => r !== role)
+    }));
+  };
+
+  const addSkill = () => {
+    const skill = prompt("Enter skill:");
+    if (skill) {
+      setProfile(prev => ({
+        ...prev,
+        skills: [...prev.skills, skill]
+      }));
+    }
+  };
+
+  const removeSkill = (skill) => {
+    setProfile(prev => ({
+      ...prev,
+      skills: prev.skills.filter(s => s !== skill)
+    }));
   };
 
   return (
@@ -166,12 +203,18 @@ export default function ProfilePage() {
               {profile.targetRoles.map((role, idx) => (
                 <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 group">
                   <span className="text-sm font-medium text-slate-300">{role}</span>
-                  <button className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-500/10 rounded-md text-red-400">
+                  <button 
+                    onClick={() => removeTargetRole(role)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-500/10 rounded-md text-red-400"
+                  >
                     <X className="w-3 h-3" />
                   </button>
                 </div>
               ))}
-              <button className="w-full py-3 rounded-xl border border-dashed border-white/20 text-slate-500 hover:border-orange-500/50 hover:text-orange-400 transition-all flex items-center justify-center gap-2 text-xs font-bold">
+              <button 
+                onClick={addTargetRole}
+                className="w-full py-3 rounded-xl border border-dashed border-white/20 text-slate-500 hover:border-orange-500/50 hover:text-orange-400 transition-all flex items-center justify-center gap-2 text-xs font-bold"
+              >
                 <Plus className="w-4 h-4" /> Add Role
               </button>
             </div>
@@ -185,10 +228,18 @@ export default function ProfilePage() {
               {profile.skills.map((skill, idx) => (
                 <span key={idx} className="px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-bold flex items-center gap-2">
                   {skill}
-                  <button className="hover:text-white"><X className="w-3 h-3" /></button>
+                  <button 
+                    onClick={() => removeSkill(skill)}
+                    className="hover:text-white"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
                 </span>
               ))}
-              <button className="px-3 py-1.5 rounded-lg border border-dashed border-white/20 text-slate-500 hover:border-yellow-500/50 hover:text-yellow-400 transition-all text-xs font-bold">
+              <button 
+                onClick={addSkill}
+                className="px-3 py-1.5 rounded-lg border border-dashed border-white/20 text-slate-500 hover:border-yellow-500/50 hover:text-yellow-400 transition-all text-xs font-bold"
+              >
                 + Add
               </button>
             </div>

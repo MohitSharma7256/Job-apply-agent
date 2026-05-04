@@ -1,25 +1,48 @@
 "use client";
 
-import { useState } from "react";
-import { BarChart3, PieChart, TrendingUp, Activity, Users, Target, Award, Calendar, ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { BarChart3, PieChart, TrendingUp, Activity, Users, Target, Award, Calendar, ChevronDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState("30d");
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState({
+    total: 0,
+    today: 0,
+    interviews: 0,
+    platforms: {}
+  });
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const response = await fetch('/api/analytics/summary');
+        const result = await response.json();
+        if (result.success) {
+          setData(result.summary);
+        }
+      } catch (error) {
+        console.error('Failed to fetch analytics:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAnalytics();
+  }, []);
 
   const stats = [
-    { title: "Total Applications", value: "142", trend: "+12%", icon: Activity, color: "text-blue-400" },
-    { title: "Interviews", value: "8", trend: "+2%", icon: Users, color: "text-purple-400" },
-    { title: "Response Rate", value: "18.5%", trend: "+5%", icon: TrendingUp, color: "text-green-400" },
-    { title: "AI Success Rate", value: "94%", trend: "Stable", icon: Target, color: "text-orange-400" },
+    { title: "Total Applications", value: data.total.toString(), trend: data.today > 0 ? `+${data.today} today` : "Stable", icon: Activity, color: "text-blue-400" },
+    { title: "Interviews", value: data.interviews.toString(), trend: "+0%", icon: Users, color: "text-purple-400" },
+    { title: "Response Rate", value: data.total > 0 ? `${((data.interviews / data.total) * 100).toFixed(1)}%` : "0%", trend: "+0%", icon: TrendingUp, color: "text-green-400" },
+    { title: "Jobs Today", value: data.today.toString(), trend: "Active", icon: Target, color: "text-orange-400" },
   ];
 
-  const platforms = [
-    { name: "LinkedIn", count: 64, color: "bg-blue-600" },
-    { name: "Naukri", count: 48, color: "bg-blue-500" },
-    { name: "Indeed", count: 18, color: "bg-green-500" },
-    { name: "Glassdoor", count: 12, color: "bg-teal-500" },
-  ];
+  const platforms = Object.entries(data.platforms).map(([name, count]) => ({
+    name: name.charAt(0).toUpperCase() + name.slice(1),
+    count,
+    color: name === 'linkedin' ? 'bg-blue-600' : 'bg-blue-500'
+  }));
 
   return (
     <div className="p-8 max-w-5xl mx-auto">

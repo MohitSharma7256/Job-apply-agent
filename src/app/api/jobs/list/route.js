@@ -4,7 +4,7 @@ import { dbService } from '@/services/dbService';
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || 'default-user';
+    const userId = searchParams.get('userId') || '00000000-0000-0000-0000-000000000000';
     const limit = parseInt(searchParams.get('limit')) || 20;
 
     const { data: jobs, error } = await dbService.getJobs(userId, limit);

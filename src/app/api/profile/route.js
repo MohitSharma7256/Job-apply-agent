@@ -4,7 +4,7 @@ import { dbService } from '@/services/dbService';
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || 'default-user'; // Replace with auth logic
+    const userId = searchParams.get('userId') || '00000000-0000-0000-0000-000000000000'; // Mock UUID fallback
 
     const { data: profile, error } = await dbService.getProfile(userId);
     
@@ -27,7 +27,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const profileData = await request.json();
-    const userId = profileData.id || 'default-user'; // Replace with auth logic
+    const userId = profileData.id || '00000000-0000-0000-0000-000000000000'; // Mock UUID fallback
     
     const { data, error } = await dbService.updateProfile(userId, profileData);
     

@@ -1,27 +1,43 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '../../../../services/dbService';
+import { dbService } from '@/services/dbService';
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || 'default-user';
+    const userId = searchParams.get('userId') || '00000000-0000-0000-0000-000000000000';
 
-    const today = new Date().toISOString().split('T')[0];
-    const { data: applications, error } = await supabase
-      .from('applications')
-      .select('*')
-      .eq('userId', userId)
-      .gte('appliedAt', today);
+    const { data: applications, error } = await dbService.getApplications(userId);
+    
+    if (error) throw error;
 
-    const todayCount = applications?.length || 0;
+    // Calculate stats
+    const total = applications?.length || 0;
+    const appliedToday = applications?.filter(app => {
+      const today = new Date().toISOString().split('T')[0];
+      return app.created_at.startsWith(today);
+    }).length || 0;
+
+    const interviewCount = applications?.filter(app => app.status === 'interview').length || 0;
+    
+    const platformStats = (applications || []).reduce((acc, app) => {
+      acc[app.platform] = (acc[app.platform] || 0) + 1;
+      return acc;
+    }, {});
 
     return NextResponse.json({
       success: true,
       summary: {
-        today: todayCount,
-      },
+        total,
+        today: appliedToday,
+        interviews: interviewCount,
+        platforms: platformStats
+      }
     });
   } catch (error) {
-    return NextResponse.json({ success: true, summary: { today: 0 } });
+    console.error('Analytics API Error:', error);
+    return NextResponse.json({ 
+      success: true, 
+      summary: { total: 0, today: 0, interviews: 0, platforms: {} } 
+    });
   }
 }

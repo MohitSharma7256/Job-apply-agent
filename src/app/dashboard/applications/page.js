@@ -66,31 +66,38 @@ export default function ApplicationsLogPage() {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length) {
-          setRows(parsed);
-          setHydrated(true);
-          return;
+    const fetchApplications = async () => {
+      try {
+        const userId = '00000000-0000-0000-0000-000000000000';
+        const response = await fetch(`/api/applications/user/${userId}`);
+        const data = await response.json();
+        if (data.success && data.applications) {
+          const mappedRows = data.applications.map(app => ({
+            id: app.id,
+            appliedDate: app.created_at?.split('T')[0] || "",
+            company: app.company || "",
+            roleTitle: app.job_title || "",
+            location: app.location || "",
+            workMode: app.work_mode || "",
+            platform: app.platform || "",
+            salaryPackage: app.salary_package || "",
+            resumeUsed: app.resume_used || "",
+            resumeTailored: app.ai_tailored ? "yes" : "no",
+            coverLetterUsed: app.cover_letter_used ? "yes" : "no",
+            status: app.status || "Applied",
+            notes: app.notes || ""
+          }));
+          setRows(mappedRows.length > 0 ? mappedRows : [createEmptyRow()]);
         }
+      } catch (error) {
+        console.error('Failed to fetch applications:', error);
+        setRows([createEmptyRow()]);
+      } finally {
+        setHydrated(true);
       }
-    } catch {
-      /* ignore */
-    }
-    setRows([createEmptyRow()]);
-    setHydrated(true);
+    };
+    fetchApplications();
   }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
-    } catch {
-      /* ignore */
-    }
-  }, [rows, hydrated]);
 
   const patchRow = useCallback((id, field, value) => {
     setRows((prev) =>

@@ -10,17 +10,27 @@ export const supabaseClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEX
 class DbService {
   // User Profile operations
   async getProfile(userId) {
-    const { data, error } = await supabaseClient
-      .from('user_profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    
-    if (error && error.code !== 'PGRST116') { // Not found is ok
-      throw error;
+    try {
+      // Basic UUID validation regex
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(userId)) {
+        return { data: null, error: null };
+      }
+
+      const { data, error } = await supabaseClient
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') {
+        return { data: null, error };
+      }
+      
+      return { data, error: null };
+    } catch (e) {
+      return { data: null, error: e };
     }
-    
-    return { data, error };
   }
 
   async createProfile(profile) {
@@ -36,8 +46,7 @@ class DbService {
   async updateProfile(userId, updates) {
     const { data, error } = await supabaseClient
       .from('user_profiles')
-      .update(updates)
-      .eq('id', userId)
+      .upsert({ ...updates, id: userId })
       .select()
       .single();
     
@@ -46,14 +55,23 @@ class DbService {
 
   // Job operations
   async getJobs(userId, limit = 100, offset = 0) {
-    const { data, error } = await supabaseClient
-      .from('jobs')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-    
-    return { data, error };
+    try {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(userId)) {
+        return { data: [], error: null };
+      }
+
+      const { data, error } = await supabaseClient
+        .from('jobs')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+      
+      return { data: data || [], error };
+    } catch (e) {
+      return { data: [], error: e };
+    }
   }
 
   async saveJob(job) {
