@@ -44,19 +44,19 @@ export const CoverLetterRequestSchema = z.object({
 export const HallucinationReportSchema = z.object({
   unsupportedClaims: z.array(z.object({
     claim: z.string(),
-    location: string,
-    confidence: number,
-    reason: string
+    location: z.string(),
+    confidence: z.number(),
+    reason: z.string()
   })),
   fabricatedMetrics: z.array(z.object({
-    metric: string,
-    location: string,
-    suggestedFix: string
+    metric: z.string(),
+    location: z.string(),
+    suggestedFix: z.string()
   })),
   falseConnections: z.array(z.object({
-    connection: string,
-    location: string,
-    reason: string
+    connection: z.string(),
+    location: z.string(),
+    reason: z.string()
   }))
 });
 
