@@ -1,4 +1,4 @@
-const { aiService } = require('../../../../services/aiService');
+import { aiService } from '@/services/aiService';
 
 export const runtime = 'nodejs';
 
