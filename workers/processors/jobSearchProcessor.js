@@ -148,6 +148,7 @@ export async function processJobSearch(jobData) {
 
 // Generate mock job data (replace with real web scraping)
 async function generateMockJobs(keywords, locations, platforms, maxResults) {
+  const baseJobs = [
     {
       title: 'Senior Frontend Developer',
       company: 'Tech Corp',
