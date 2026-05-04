@@ -35,12 +35,10 @@ export function Sidebar({ isOpen, setIsOpen }) {
 
       {/* Sidebar Content */}
       <aside className={cn(
-        "h-screen bg-slate-950 border-r border-white/10 flex flex-col p-6 z-[60] transition-transform duration-300",
-        // Desktop: Sticky and in-flow
-        "lg:sticky lg:top-0 lg:translate-x-0 lg:w-72 lg:min-w-[288px] lg:flex-shrink-0",
-        // Mobile: Fixed and overlay
-        "fixed top-0 left-0 w-72 max-w-[80vw] lg:max-w-none",
-        isOpen ? "translate-x-0" : "-translate-x-full"
+        "h-screen bg-slate-950 flex flex-col p-6 z-[60] transition-transform duration-300 w-72",
+        // Mobile Drawer logic
+        "fixed top-0 left-0 lg:static lg:translate-x-0",
+        !isOpen && "-translate-x-full lg:translate-x-0"
       )}>
         {/* Mobile Close Button */}
         <button 
