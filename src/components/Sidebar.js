@@ -35,9 +35,12 @@ export function Sidebar({ isOpen, setIsOpen }) {
 
       {/* Sidebar Content */}
       <aside className={cn(
-        "fixed lg:sticky top-0 left-0 w-72 min-w-[288px] flex-shrink-0 h-screen bg-slate-950 border-r border-white/10 flex flex-col p-6 z-[60] transition-transform duration-300",
-        "lg:translate-x-0", // Always visible on desktop
-        isOpen ? "translate-x-0" : "-translate-x-full" // Toggle on mobile
+        "h-screen bg-slate-950 border-r border-white/10 flex flex-col p-6 z-[60] transition-transform duration-300",
+        // Desktop: Sticky and in-flow
+        "lg:sticky lg:top-0 lg:translate-x-0 lg:w-72 lg:min-w-[288px] lg:flex-shrink-0",
+        // Mobile: Fixed and overlay
+        "fixed top-0 left-0 w-72 max-w-[80vw] lg:max-w-none",
+        isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         {/* Mobile Close Button */}
         <button 
