@@ -38,8 +38,15 @@ export function validateEnv() {
     return { success: true, env };
   } catch (error) {
     console.error('❌ Environment validation failed:');
-    console.error(error.errors?.map(e => `- ${e.path.join('.')}: ${e.message}`).join('\n'));
-    console.error('\nPlease check your .env file and ensure all required variables are set.');
+    if (error.errors) {
+      error.errors.forEach(e => {
+        console.error(`  - ${e.path.join('.')}: ${e.message}`);
+      });
+    } else {
+      console.error(error);
+    }
+    
+    console.warn('\nEnvironment variables present:', Object.keys(process.env).filter(k => !k.startsWith('npm_')).join(', '));
     
     // Don't exit during build phase or production to allow deployment to proceed
     if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.NODE_ENV === 'production') {

@@ -1,16 +1,43 @@
 import { Queue, Worker, QueueEvents } from 'bullmq';
+import Redis from 'ioredis';
 import { env } from './env.js';
 import { dbService } from '../services/dbService.js';
 
 // Redis connection configuration
-const redisConnection = env.REDIS_URL || {
-  host: 'localhost',
-  port: 6379,
+const getRedisConnection = () => {
+  const url = env.REDIS_URL || process.env.REDIS_URL;
+  
+  if (url) {
+    console.log('📡 Using Redis URL from environment');
+    return url;
+  }
+  
+  console.warn('⚠️ REDIS_URL not found, falling back to localhost:6379');
+  return {
+    host: 'localhost',
+    port: 6379,
+  };
+};
+
+const redisConnection = getRedisConnection();
+
+// Connection options
+const redisOptions = {
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false,
+};
+
+// Create connection function
+const createConnection = () => {
+  if (typeof redisConnection === 'string') {
+    return new Redis(redisConnection, redisOptions);
+  }
+  return new Redis({ ...redisConnection, ...redisOptions });
 };
 
 // Queue configuration
 const queueConfig = {
-  connection: redisConnection,
+  connection: createConnection(),
   defaultJobOptions: {
     removeOnComplete: 100, // Keep last 100 completed jobs
     removeOnFail: 50,      // Keep last 50 failed jobs
@@ -32,23 +59,23 @@ export const QUEUES = {
   DEAD_LETTER: 'dead-letter',
 };
 
-// Create queues
+// Create queues (each gets its own connection to avoid issues)
 export const queues = {
-  [QUEUES.JOB_SEARCH]: new Queue(QUEUES.JOB_SEARCH, queueConfig),
-  [QUEUES.RESUME_TAILOR]: new Queue(QUEUES.RESUME_TAILOR, queueConfig),
-  [QUEUES.JOB_APPLY]: new Queue(QUEUES.JOB_APPLY, queueConfig),
-  [QUEUES.AI_PROCESSING]: new Queue(QUEUES.AI_PROCESSING, queueConfig),
-  [QUEUES.WEB_AUTOMATION]: new Queue(QUEUES.WEB_AUTOMATION, queueConfig),
-  [QUEUES.DEAD_LETTER]: new Queue(QUEUES.DEAD_LETTER, queueConfig),
+  [QUEUES.JOB_SEARCH]: new Queue(QUEUES.JOB_SEARCH, { ...queueConfig, connection: createConnection() }),
+  [QUEUES.RESUME_TAILOR]: new Queue(QUEUES.RESUME_TAILOR, { ...queueConfig, connection: createConnection() }),
+  [QUEUES.JOB_APPLY]: new Queue(QUEUES.JOB_APPLY, { ...queueConfig, connection: createConnection() }),
+  [QUEUES.AI_PROCESSING]: new Queue(QUEUES.AI_PROCESSING, { ...queueConfig, connection: createConnection() }),
+  [QUEUES.WEB_AUTOMATION]: new Queue(QUEUES.WEB_AUTOMATION, { ...queueConfig, connection: createConnection() }),
+  [QUEUES.DEAD_LETTER]: new Queue(QUEUES.DEAD_LETTER, { ...queueConfig, connection: createConnection() }),
 };
 
 // Create queue events for monitoring
 export const queueEvents = {
-  [QUEUES.JOB_SEARCH]: new QueueEvents(QUEUES.JOB_SEARCH, { connection: redisConnection }),
-  [QUEUES.RESUME_TAILOR]: new QueueEvents(QUEUES.RESUME_TAILOR, { connection: redisConnection }),
-  [QUEUES.JOB_APPLY]: new QueueEvents(QUEUES.JOB_APPLY, { connection: redisConnection }),
-  [QUEUES.AI_PROCESSING]: new QueueEvents(QUEUES.AI_PROCESSING, { connection: redisConnection }),
-  [QUEUES.WEB_AUTOMATION]: new QueueEvents(QUEUES.WEB_AUTOMATION, { connection: redisConnection }),
+  [QUEUES.JOB_SEARCH]: new QueueEvents(QUEUES.JOB_SEARCH, { connection: createConnection() }),
+  [QUEUES.RESUME_TAILOR]: new QueueEvents(QUEUES.RESUME_TAILOR, { connection: createConnection() }),
+  [QUEUES.JOB_APPLY]: new QueueEvents(QUEUES.JOB_APPLY, { connection: createConnection() }),
+  [QUEUES.AI_PROCESSING]: new QueueEvents(QUEUES.AI_PROCESSING, { connection: createConnection() }),
+  [QUEUES.WEB_AUTOMATION]: new QueueEvents(QUEUES.WEB_AUTOMATION, { connection: createConnection() }),
 };
 
 // Job status tracking
