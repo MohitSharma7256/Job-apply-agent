@@ -148,7 +148,6 @@ export async function processJobSearch(jobData) {
 
 // Generate mock job data (replace with real web scraping)
 async function generateMockJobs(keywords, locations, platforms, maxResults) {
-  const baseJobs = [
     {
       title: 'Senior Frontend Developer',
       company: 'Tech Corp',
@@ -178,7 +177,7 @@ async function generateMockJobs(keywords, locations, platforms, maxResults) {
     {
       title: 'React Developer',
       company: 'Enterprise Inc',
-      location: 'Hybrid',
+      location: 'Delhi',
       platform: 'indeed',
       description: 'Seeking talented React developer for enterprise applications...',
       skills: ['React', 'Redux', 'GraphQL', 'Jest'],
@@ -189,17 +188,30 @@ async function generateMockJobs(keywords, locations, platforms, maxResults) {
       url: 'https://indeed.com/jobs/react-developer'
     },
     {
-      title: 'Backend Engineer',
-      company: 'CloudTech',
-      location: 'San Francisco',
+      title: 'Software Engineer',
+      company: 'Google',
+      location: 'Bangalore',
       platform: 'linkedin',
-      description: 'Backend engineer with expertise in distributed systems and cloud architecture...',
-      skills: ['Go', 'Kubernetes', 'PostgreSQL', 'Redis'],
-      experienceLevel: 'senior',
-      salary: '$140k - $180k',
+      description: 'Build planet-scale applications...',
+      skills: ['Go', 'C++', 'Systems'],
+      experienceLevel: 'mid',
+      salary: '$150k+',
       companySize: 'large',
-      postedDate: new Date(Date.now() - 432000000).toISOString(),
-      url: 'https://linkedin.com/jobs/backend-engineer'
+      postedDate: new Date().toISOString(),
+      url: 'https://linkedin.com/jobs/google-se'
+    },
+    {
+      title: 'Senior Node.js Developer',
+      company: 'FinTech Solution',
+      location: 'Mumbai',
+      platform: 'naukri',
+      description: 'Looking for Node.js expert for high-throughput systems...',
+      skills: ['Node.js', 'Redis', 'Microservices'],
+      experienceLevel: 'senior',
+      salary: '₹25L - ₹40L',
+      companySize: 'medium',
+      postedDate: new Date().toISOString(),
+      url: 'https://naukri.com/jobs/node-expert'
     },
     {
       title: 'DevOps Engineer',

@@ -1,15 +1,10 @@
-"use client";
-
-import { useState, useEffect, useCallback } from "react";
-import { 
-  Search, User, Briefcase, BarChart3, Plus, X, CheckCircle2, 
-  AlertCircle, Loader2, ChevronRight, Filter, ArrowUpDown, 
-  Send, Zap, MapPin, Upload, FileText, Trash2, TrendingUp, 
-  Calendar, Clock, Award, Target, Sparkles, Rocket, Brain, Shield
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+import {
+  Search, Loader2, Rocket, Brain, User, FileText, History, BarChart3, ArrowRight, Table, Sparkles
 } from "lucide-react";
-import { SocketProvider, useSocket } from '@/hooks/useSocket';
-import { JobProgressTracker } from '@/components/JobProgressTracker';
-import { NotificationCenter, NotificationContainer } from '@/components/NotificationCenter';
+import { JobProgressTracker } from "@/components/JobProgressTracker";
 
 const PLATFORMS = [
   { id: "naukri", name: "Naukri.com", icon: "📋", color: "from-blue-500 to-blue-600" },
@@ -19,13 +14,23 @@ const PLATFORMS = [
 ];
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState("search");
   const [jobs, setJobs] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [isApplying, setIsApplying] = useState(null);
-  const [profile, setProfile] = useState({ name: "", email: "", resumeText: "", skills: [] });
-  const [searchParams, setSearchParams] = useState({ keywords: [], locations: ["India"], platforms: ["linkedin", "naukri"] });
+  const [activeJobId, setActiveJobId] = useState(null);
+  const [searchParams, setSearchParams] = useState({
+    keywords: "",
+    locations: [],
+    platforms: ["linkedin", "naukri"]
+  });
   const [toast, setToast] = useState(null);
+
+  const dashboardModules = [
+    { id: "profile", title: "Profile", description: "Manage personal details and target roles", href: "/dashboard/profile", icon: User },
+    { id: "resume", title: "Resume", description: "Base resume first, optional cover letters", href: "/dashboard/resume", icon: FileText },
+    { id: "apply-log", title: "Apply log", description: "Excel-style row per apply (resume / CL / salary / mode)", href: "/dashboard/applications", icon: Table },
+    { id: "activity", title: "Activity", description: "Searches, tailoring, automation timeline", href: "/dashboard/history", icon: History },
+    { id: "analytics", title: "Analytics", description: "Views conversion-style summaries", href: "/dashboard/analytics", icon: BarChart3 },
+  ];
 
   const showToast = (message, type) => {
     setToast({ message, type });
@@ -33,32 +38,52 @@ export default function Dashboard() {
   };
 
   const handleSearch = async () => {
+    if (!searchParams.keywords) {
+      showToast("Please enter keywords", "error");
+      return;
+    }
+
     setIsSearching(true);
-    // AI Search Logic
-    setTimeout(() => {
-      setJobs([
-        { id: "1", title: "Senior React Developer", company: "Google", location: "Bangalore", platform: "linkedin", matchScore: 92, skills: ["React", "Node", "AWS"], postedDate: "2h ago" },
-        { id: "2", title: "Frontend Engineer", company: "Meta", location: "Remote", platform: "glassdoor", matchScore: 85, skills: ["Next.js", "Tailwind"], postedDate: "5h ago" },
-      ]);
+    try {
+      const response = await fetch('/api/jobs/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...searchParams,
+          maxResults: 10
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setActiveJobId(data.data.jobId);
+        showToast("Job search queued successfully", "success");
+      } else {
+        throw new Error('Search failed');
+      }
+    } catch (error) {
+      console.error('Search failed:', error);
+      showToast("Failed to start search", "error");
       setIsSearching(false);
-      showToast("Found 24 matching jobs", "success");
-    }, 2000);
+    }
+  };
+
+  const handleJobComplete = (results) => {
+    if (results?.jobs) {
+      setJobs(results.jobs);
+    }
+    setIsSearching(false);
+    setActiveJobId(null);
+    showToast(`Found ${results?.jobs?.length || 0} matching jobs`, "success");
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 p-8">
-      {/* Header */}
+      {/* Content Header */}
       <header className="flex justify-between items-center mb-12">
         <div>
-          <h1 className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
-            Agent Pro <span className="text-xs font-bold px-2 py-1 bg-blue-500/10 text-blue-400 rounded-lg border border-blue-500/20 ml-2">V2.0</span>
-          </h1>
-          <p className="text-slate-500 mt-2">AI-Powered Career Automation</p>
-        </div>
-        <div className="flex gap-4">
-          <button className="p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all">
-            <User className="w-6 h-6 text-slate-400" />
-          </button>
+          <h1 className="text-4xl font-black text-white">Dashboard</h1>
+          <p className="text-slate-500 mt-2">Welcome back! Here&apos;s what&apos;s happening with your applications.</p>
         </div>
       </header>
 
@@ -74,15 +99,31 @@ export default function Dashboard() {
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Keywords</label>
                 <input 
-                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-blue-500/50 transition-all"
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-blue-500/50 transition-all text-white"
                   placeholder="React, Node, Remote..."
+                  value={searchParams.keywords}
+                  onChange={e => setSearchParams({...searchParams, keywords: e.target.value})}
                 />
               </div>
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Platforms</label>
                 <div className="grid grid-cols-2 gap-2">
                   {PLATFORMS.map(p => (
-                    <button key={p.id} className="flex items-center gap-2 p-3 rounded-xl bg-white/5 border border-white/5 hover:border-blue-500/30 transition-all text-xs font-medium">
+                    <button 
+                      key={p.id} 
+                      onClick={() => {
+                        const newPlatforms = searchParams.platforms.includes(p.id)
+                          ? searchParams.platforms.filter(id => id !== p.id)
+                          : [...searchParams.platforms, p.id];
+                        setSearchParams({...searchParams, platforms: newPlatforms});
+                      }}
+                      className={cn(
+                        "flex items-center gap-2 p-3 rounded-xl border transition-all text-xs font-medium",
+                        searchParams.platforms.includes(p.id) 
+                          ? "bg-blue-500/10 border-blue-500/30 text-blue-400" 
+                          : "bg-white/5 border-white/5 text-slate-400"
+                      )}
+                    >
                       <span>{p.icon}</span> {p.name}
                     </button>
                   ))}
@@ -102,6 +143,14 @@ export default function Dashboard() {
 
         {/* Results List */}
         <div className="lg:col-span-2 space-y-4">
+          {activeJobId && (
+            <div className="mb-8">
+              <JobProgressTracker 
+                jobId={activeJobId} 
+                onComplete={handleJobComplete}
+              />
+            </div>
+          )}
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Recommended for you</h2>
             <div className="flex gap-2">
@@ -145,6 +194,35 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Feature Modules */}
+      <section className="mt-12">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold">Explore all features</h2>
+          <p className="text-xs uppercase tracking-widest text-slate-500">Everything in one dashboard</p>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          {dashboardModules.map((module) => {
+            const Icon = module.icon;
+            return (
+              <Link
+                key={module.id}
+                href={module.href}
+                className="group rounded-3xl border border-white/10 bg-white/5 p-5 hover:border-blue-500/40 hover:bg-white/[0.07] transition-all"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="h-11 w-11 rounded-xl bg-blue-500/15 border border-blue-500/20 flex items-center justify-center">
+                    <Icon className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                </div>
+                <h3 className="font-bold text-white mb-2">{module.title}</h3>
+                <p className="text-sm text-slate-400">{module.description}</p>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
 
       {/* Toast */}
       {toast && (
