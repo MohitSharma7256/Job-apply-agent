@@ -8,7 +8,22 @@
     "dev": "node server.js",
     "build": "next build",
     "start": "node server.js",
-    "lint": "next lint"
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "typecheck": "next build --type-check-only",
+    "typecheck:watch": "tsc --noEmit --watch",
+    "validate": "npm run lint && npm run typecheck",
+    "test": "jest --testPathPattern=src/shared/__tests__ --coverage --coverageReport=json --coverageReport=lcov",
+    "test:integration": "jest --testPathPattern=src/app/api/__tests__ --testTimeout=30000",
+    "test:e2e": "playwright test",
+    "test:all": "npm run test && npm run test:integration && npm run test:e2e",
+    "test:watch": "jest --watch",
+    "migrate": "node scripts/migrate.js",
+    "migrate:rollback": "node scripts/rollback.js",
+    "worker": "node workers/index.js",
+    "worker:dev": "node workers/index.js",
+    "queue:stats": "curl http://localhost:3000/api/queue/stats",
+    "queue:clean": "node scripts/clean-queues.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

@@ -1,81 +1,63 @@
-import { NextResponse } from 'next/server';
-import { jobScoringService } from '../../../../services/jobScoringService';
+import { withCorrelationId, successResponse, withAuth } from '@/shared/errors';
+import { validateRequest, JobSearchSchema } from '@/shared/schemas';
+import { addJob, getJobInfo, QUEUES } from '@/shared/queue';
+import { v4 as uuidv4 } from 'uuid';
 
-export async function POST(request) {
-  try {
-    const { keywords, locations, platforms, maxResults, profile } = await request.json();
+export const POST = withCorrelationId(withAuth(async (request) => {
+  // Validate request data
+  const { keywords, locations, platforms, maxResults, profile } = await validateRequest(JobSearchSchema)(request);
+  
+  // Generate idempotency key
+  const idempotencyKey = uuidv4();
+  
+  // Prepare job data
+  const jobData = {
+    type: 'job_search',
+    userId: request.user.id,
+    keywords,
+    locations,
+    platforms,
+    maxResults,
+    profile,
+    idempotencyKey,
+    queue: QUEUES.JOB_SEARCH,
+    startTime: Date.now()
+  };
 
-    // Enhanced mock search results with more details
-    const mockJobs = [
-      {
-        id: '1',
-        title: 'Senior Frontend Developer',
-        company: 'Tech Corp',
-        location: 'Remote',
-        platform: 'linkedin',
-        description: 'Looking for experienced frontend developer with React and TypeScript skills...',
-        skills: ['React', 'TypeScript', 'CSS', 'Node.js'],
-        experienceLevel: 'senior',
-        salary: '$120k - $150k',
-        companySize: 'medium',
-        postedDate: new Date().toISOString(),
-        applied: false
-      },
-      {
-        id: '2',
-        title: 'Full Stack Engineer',
-        company: 'StartupXYZ',
-        location: 'Bangalore',
-        platform: 'naukri',
-        description: 'Join our team as a full stack engineer working with modern tech stack...',
-        skills: ['JavaScript', 'Python', 'Docker', 'AWS'],
-        experienceLevel: 'mid',
-        salary: '$80k - $100k',
-        companySize: 'small',
-        postedDate: new Date(Date.now() - 86400000).toISOString(),
-        applied: false
-      },
-      {
-        id: '3',
-        title: 'React Developer',
-        company: 'Enterprise Inc',
-        location: 'Hybrid',
-        platform: 'indeed',
-        description: 'Seeking talented React developer for enterprise applications...',
-        skills: ['React', 'Redux', 'GraphQL', 'Jest'],
-        experienceLevel: 'mid',
-        salary: '$100k - $130k',
-        companySize: 'large',
-        postedDate: new Date(Date.now() - 172800000).toISOString(),
-        applied: false
-      }
-    ];
+  // Add job to queue
+  const jobResult = await addJob(QUEUES.JOB_SEARCH, jobData);
 
-    // Score all jobs using AIHawk-inspired scoring system
-    const scoredJobs = await jobScoringService.scoreMultipleJobs(mockJobs, profile);
+  return successResponse({
+    jobId: jobResult.jobId,
+    queue: jobResult.queue,
+    status: jobResult.status,
+    estimatedDuration: '30-60 seconds',
+    checkUrl: `/api/jobs/${jobResult.jobId}/status`
+  }, {
+    message: 'Job search queued successfully',
+    idempotencyKey
+  });
+}));
 
-    // Filter by minimum suitability score
-    const qualifiedJobs = jobScoringService.filterJobsByScore(scoredJobs);
-
-    // Apply application limits
-    const limitedJobs = qualifiedJobs.slice(0, maxResults || 10);
-
-    return NextResponse.json({
-      success: true,
-      jobs: limitedJobs,
-      matchedCount: qualifiedJobs.length,
-      qualifiedCount: qualifiedJobs.length,
-      scoringStats: {
-        averageScore: qualifiedJobs.reduce((sum, job) => sum + job.score, 0) / qualifiedJobs.length || 0,
-        highMatchCount: qualifiedJobs.filter(job => job.score >= 8).length,
-        mediumMatchCount: qualifiedJobs.filter(job => job.score >= 6 && job.score < 8).length
-      }
-    });
-  } catch (error) {
-    console.error('Job search error:', error);
-    return NextResponse.json({
-      success: false,
-      error: error.message
-    });
+// GET endpoint to check job status
+export const GET = withCorrelationId(withAuth(async (request) => {
+  const { searchParams } = new URL(request.url);
+  const jobId = searchParams.get('jobId');
+  
+  if (!jobId) {
+    throw new ValidationError('Job ID is required');
   }
-}
+
+  const jobInfo = await getJobInfo(jobId);
+  
+  if (!jobInfo) {
+    throw new ValidationError('Job not found');
+  }
+
+  // Verify user can access this job
+  if (jobInfo.input?.userId !== request.user.id) {
+    throw new ValidationError('Access denied to this job');
+  }
+
+  return successResponse(jobInfo);
+}));
