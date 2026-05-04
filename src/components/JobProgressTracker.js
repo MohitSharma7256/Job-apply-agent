@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import { useJobUpdates } from '../hooks/useSocket';
 import { CheckCircle, Clock, AlertCircle, XCircle, Loader2, RefreshCw, X } from 'lucide-react';
