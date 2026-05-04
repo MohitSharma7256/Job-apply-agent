@@ -13,15 +13,6 @@ class MLPredictionService {
       careerBaseline: 0.65, // 65% career path accuracy
       salaryBaseline: 0.85 // 85% salary prediction accuracy
     };
-
-    this.initializeModels();
-  }
-
-  // Initialize ML models (simplified for demo)
-  async initializeModels() {
-    // In production, these would be actual trained models
-    // For now, we'll use rule-based and statistical approaches
-    console.log('🤖 Initializing ML Prediction Models...');
   }
 
   // Predict job match probability with ML-style scoring

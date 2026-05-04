@@ -1,5 +1,3 @@
-import { aiService } from './aiService.js';
-
 class InterviewCoachService {
   constructor() {
     this.systemDesignCases = [

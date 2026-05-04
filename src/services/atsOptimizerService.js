@@ -1,5 +1,3 @@
-import { aiService } from './aiService.js';
-
 class ATSOptimizerService {
   constructor() {
     this.atsKeywords = {

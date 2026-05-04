@@ -1,5 +1,3 @@
-import { aiService } from './aiService.js';
-
 class ResumeBuilderService {
   constructor() {
     this.templates = {
