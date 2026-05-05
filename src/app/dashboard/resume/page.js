@@ -6,7 +6,7 @@ import {
   Trash2, Eye, Mail, Plus, Wand2, Save, X, AlertCircle, RefreshCw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { authFetch, getAuthToken } from "@/lib/apiClient";
+import { cn } from "@/lib/utils";
 
 export default function ResumePage() {
   const [isUploading, setIsUploading] = useState(false);
@@ -29,25 +29,10 @@ export default function ResumePage() {
   const checkHealth = async () => {
     setStatus('checking');
     try {
-      const token = getAuthToken();
-      console.log('[ResumePage] Auth token exists:', !!token);
-      
-      if (!token) {
-        console.error('[ResumePage] No auth token found');
-        setStatus('error');
-        return;
-      }
-      
-      const res = await authFetch('/api/profile');
+      const res = await fetch('/api/profile');
       const data = await res.json();
       
       if (!res.ok) {
-        if (data.requiresAuth) {
-          console.error('[ResumePage] Authentication required:', data.error);
-          setError('Authentication required. Please log in again.');
-          setStatus('error');
-          return;
-        }
         console.error('[ResumePage] API error:', data.error);
         setStatus('error');
         return;
@@ -69,18 +54,10 @@ export default function ResumePage() {
     setError(null);
 
     try {
-      const token = getAuthToken();
-      console.log('[ResumePage] Uploading with token:', !!token);
-      
-      if (!token) {
-        setError('Authentication required. Please log in to upload files.');
-        return;
-      }
-      
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await authFetch('/api/resume/upload', {
+      const response = await fetch('/api/resume/upload', {
         method: 'POST',
         body: formData
       });
@@ -88,10 +65,6 @@ export default function ResumePage() {
       const data = await response.json();
 
       if (!response.ok) {
-        if (data.requiresAuth) {
-          setError('Authentication required. Please log in again to upload files.');
-          return;
-        }
         setError(data.error || 'Server Refused Upload. Configuration Error.');
         return;
       }
