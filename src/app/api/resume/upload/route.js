@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server';
-import { dbService } from '@/services/dbService';
+import { getSupabaseAdmin } from '@/services/dbService';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
   try {
-    if (!dbService.supabase) {
+    const supabase = getSupabaseAdmin();
+    
+    if (!supabase) {
       return NextResponse.json({ 
         success: false, 
-        error: 'Supabase keys are missing in environment variables. Check your Render settings.' 
+        error: 'Server configuration missing. Ensure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set on Render.' 
       }, { status: 200 });
     }
 
@@ -18,13 +22,12 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'No file provided' }, { status: 200 });
     }
 
-    // Convert file to Buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // 1. Upload to Supabase Storage
     const fileName = `${userId}/${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
-    const { data: uploadData, error: uploadError } = await dbService.supabase.storage
+    
+    const { data: uploadData, error: uploadError } = await supabase.storage
       .from('resumes')
       .upload(fileName, buffer, {
         contentType: file.type,
@@ -32,32 +35,30 @@ export async function POST(request) {
       });
 
     if (uploadError) {
-      console.error('Storage Error:', uploadError);
+      console.error('Production Storage Error:', uploadError);
       let errorMsg = uploadError.message;
       if (errorMsg.includes('bucket not found')) {
-        errorMsg = 'Storage bucket "resumes" not found in Supabase. Please create it manually.';
+        errorMsg = 'Bucket "resumes" not found. Please create a PUBLIC bucket named "resumes" in Supabase Storage.';
       }
       return NextResponse.json({ success: false, error: errorMsg }, { status: 200 });
     }
 
-    // 2. Get Public URL
-    const { data: { publicUrl } } = dbService.supabase.storage
+    const { data: { publicUrl } } = supabase.storage
       .from('resumes')
       .getPublicUrl(fileName);
 
     return NextResponse.json({
       success: true,
-      message: 'File uploaded successfully',
       url: publicUrl,
       fileName: file.name,
       size: (file.size / (1024 * 1024)).toFixed(2) + ' MB'
     });
 
   } catch (error) {
-    console.error('Upload API Exception:', error);
+    console.error('Critical Upload Exception:', error);
     return NextResponse.json({
       success: false,
-      error: 'Unexpected server error during upload'
+      error: 'Unexpected server error during upload: ' + error.message
     }, { status: 200 });
   }
 }
