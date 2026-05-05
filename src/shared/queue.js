@@ -21,29 +21,128 @@ const getRedisConnection = () => {
 
 export const redisConnection = getRedisConnection();
 
-// Connection options
-const redisOptions = {
+// Connection options for BullMQ queues
+const queueRedisOptions = {
   maxRetriesPerRequest: null,
-  enableReadyCheck: false,
+  enableReadyCheck: true,
+  retryDelayOnFailover: 100,
+  enableOfflineQueue: false,
+  lazyConnect: true,
+  keepAlive: 30000,
+  connectTimeout: 10000,
+  commandTimeout: 5000,
   retryStrategy(times) {
-    const delay = Math.min(times * 50, 2000);
+    const delay = Math.min(times * 100, 3000);
+    console.log(`🔄 Redis retry attempt ${times}, delay: ${delay}ms`);
     return delay;
   },
   reconnectOnError(err) {
-    const targetError = 'READONLY';
-    if (err.message.includes(targetError)) {
+    const targetErrors = ['READONLY', 'ECONNRESET', 'ENOTFOUND', 'ECONNREFUSED'];
+    if (targetErrors.some(targetErr => err.message.includes(targetErr))) {
+      console.log('🔄 Redis reconnecting due to error:', err.message);
       return true;
     }
     return false;
   },
 };
 
-// Create connection function
+// Connection options for direct Redis usage
+const directRedisOptions = {
+  maxRetriesPerRequest: 3,
+  enableReadyCheck: true,
+  retryDelayOnFailover: 100,
+  enableOfflineQueue: false,
+  lazyConnect: true,
+  keepAlive: 30000,
+  connectTimeout: 10000,
+  commandTimeout: 5000,
+  retryStrategy(times) {
+    const delay = Math.min(times * 100, 3000);
+    console.log(`🔄 Redis retry attempt ${times}, delay: ${delay}ms`);
+    return delay;
+  },
+  reconnectOnError(err) {
+    const targetErrors = ['READONLY', 'ECONNRESET', 'ENOTFOUND', 'ECONNREFUSED'];
+    if (targetErrors.some(targetErr => err.message.includes(targetErr))) {
+      console.log('🔄 Redis reconnecting due to error:', err.message);
+      return true;
+    }
+    return false;
+  },
+};
+
+// Create connection function for BullMQ queues
 export const createConnection = () => {
-  if (typeof redisConnection === 'string') {
-    return new Redis(redisConnection, redisOptions);
-  }
-  return new Redis({ ...redisConnection, ...redisOptions });
+  const connection = typeof redisConnection === 'string' 
+    ? new Redis(redisConnection, queueRedisOptions)
+    : new Redis({ ...redisConnection, ...queueRedisOptions });
+  
+  // Add comprehensive error handling
+  connection.on('error', (err) => {
+    console.error('❌ Redis connection error:', err.message);
+    if (err.code === 'ECONNRESET' || err.code === 'ECONNREFUSED') {
+      console.log('🔄 Redis connection lost, will attempt reconnection...');
+    }
+  });
+  
+  connection.on('connect', () => {
+    console.log('✅ Redis connected successfully');
+  });
+  
+  connection.on('ready', () => {
+    console.log('✅ Redis connection ready');
+  });
+  
+  connection.on('close', () => {
+    console.log('🔄 Redis connection closed');
+  });
+  
+  connection.on('reconnecting', (ms) => {
+    console.log(`🔄 Redis reconnecting in ${ms}ms`);
+  });
+  
+  connection.on('end', () => {
+    console.log('🔄 Redis connection ended');
+  });
+  
+  return connection;
+};
+
+// Create connection function for direct Redis usage
+export const createDirectConnection = () => {
+  const connection = typeof redisConnection === 'string' 
+    ? new Redis(redisConnection, directRedisOptions)
+    : new Redis({ ...redisConnection, ...directRedisOptions });
+  
+  // Add comprehensive error handling
+  connection.on('error', (err) => {
+    console.error('❌ Direct Redis connection error:', err.message);
+    if (err.code === 'ECONNRESET' || err.code === 'ECONNREFUSED') {
+      console.log('🔄 Direct Redis connection lost, will attempt reconnection...');
+    }
+  });
+  
+  connection.on('connect', () => {
+    console.log('✅ Direct Redis connected successfully');
+  });
+  
+  connection.on('ready', () => {
+    console.log('✅ Direct Redis connection ready');
+  });
+  
+  connection.on('close', () => {
+    console.log('🔄 Direct Redis connection closed');
+  });
+  
+  connection.on('reconnecting', (ms) => {
+    console.log(`🔄 Direct Redis reconnecting in ${ms}ms`);
+  });
+  
+  connection.on('end', () => {
+    console.log('🔄 Direct Redis connection ended');
+  });
+  
+  return connection;
 };
 
 // Queue configuration

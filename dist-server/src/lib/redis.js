@@ -28,8 +28,25 @@ const createNoopRedis = () => {
 };
 const redis = redisUrl
     ? new ioredis_1.default(redisUrl, {
-        maxRetriesPerRequest: null,
+        maxRetriesPerRequest: 3,
         enableReadyCheck: true,
+        retryDelayOnFailover: 100,
+        enableOfflineQueue: false,
+        lazyConnect: true,
+        keepAlive: 30000,
+        connectTimeout: 10000,
+        commandTimeout: 5000,
+        retryStrategy(times) {
+            const delay = Math.min(times * 100, 3000);
+            return delay;
+        },
+        reconnectOnError(err) {
+            const targetErrors = ['READONLY', 'ECONNRESET', 'ENOTFOUND', 'ECONNREFUSED'];
+            if (targetErrors.some(targetErr => err.message.includes(targetErr))) {
+                return true;
+            }
+            return false;
+        },
     })
     : createNoopRedis();
 function getRedis() {

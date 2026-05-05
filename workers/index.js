@@ -9,7 +9,7 @@ import { processWebAutomation } from './processors/webAutomationProcessor.js';
 
 // Worker configuration
 const workerConfig = {
-  connection: redisConnection,
+  connection: createConnection(),
   concurrency: {
     [QUEUES.JOB_SEARCH]: 2,
     [QUEUES.RESUME_TAILOR]: 3,
@@ -189,6 +189,9 @@ workers[QUEUES.WEB_AUTOMATION] = new Worker(
 Object.values(workers).forEach(worker => {
   worker.on('error', (err) => {
     console.error('❌ Worker error:', err);
+    if (err.code === 'ECONNRESET' || err.message.includes('ECONNRESET')) {
+      console.log('🔄 Worker detected Redis connection reset, will recover...');
+    }
   });
 
   worker.on('stalled', (job) => {
@@ -201,6 +204,14 @@ Object.values(workers).forEach(worker => {
 
   worker.on('failed', (job, err) => {
     console.error(`❌ Worker failed job ${job.id}:`, err);
+    if (err.code === 'ECONNRESET' || err.message.includes('ECONNRESET')) {
+      console.log('🔄 Worker job failed due to Redis connection reset');
+    }
+  });
+
+  // Handle Redis connection issues
+  worker.connection.on('error', (err) => {
+    console.error('❌ Worker Redis connection error:', err.message);
   });
 });
 
