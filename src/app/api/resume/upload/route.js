@@ -27,20 +27,38 @@ export async function POST(request) {
 
     const fileName = `${userId}/${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
     
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    let { data: uploadData, error: uploadError } = await supabase.storage
       .from('resumes')
       .upload(fileName, buffer, {
         contentType: file.type,
         upsert: true
       });
 
+    // Auto-create bucket if missing and retry
+    if (uploadError && uploadError.message.toLowerCase().includes('bucket not found')) {
+      console.log('🔄 Bucket "resumes" missing. Auto-creating public bucket...');
+      const { error: createError } = await supabase.storage.createBucket('resumes', { public: true });
+      
+      if (createError) {
+        console.error('❌ Failed to auto-create bucket:', createError);
+        return NextResponse.json({ success: false, error: 'Failed to create storage bucket automatically. Please create a PUBLIC bucket named "resumes" in Supabase Storage.' }, { status: 200 });
+      }
+      
+      // Retry upload
+      const retry = await supabase.storage
+        .from('resumes')
+        .upload(fileName, buffer, {
+          contentType: file.type,
+          upsert: true
+        });
+        
+      uploadData = retry.data;
+      uploadError = retry.error;
+    }
+
     if (uploadError) {
       console.error('Production Storage Error:', uploadError);
-      let errorMsg = uploadError.message;
-      if (errorMsg.includes('bucket not found')) {
-        errorMsg = 'Bucket "resumes" not found. Please create a PUBLIC bucket named "resumes" in Supabase Storage.';
-      }
-      return NextResponse.json({ success: false, error: errorMsg }, { status: 200 });
+      return NextResponse.json({ success: false, error: uploadError.message }, { status: 200 });
     }
 
     const { data: { publicUrl } } = supabase.storage

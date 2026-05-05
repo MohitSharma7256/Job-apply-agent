@@ -130,12 +130,26 @@ export default function ResumePage() {
       </header>
 
       {error && (
-        <div className="p-6 rounded-[32px] bg-red-500/10 border border-red-500/20 flex items-start gap-5 text-red-400 animate-in slide-in-from-top-4 duration-500">
-          <AlertCircle className="w-6 h-6 mt-1 shrink-0" />
-          <div className="space-y-1">
-            <h4 className="font-bold text-white tracking-tight">System Configuration Error</h4>
-            <p className="text-sm font-medium text-red-400/80 leading-relaxed">{error}</p>
+        <div className="p-6 rounded-[32px] bg-red-500/10 border border-red-500/20 flex flex-col gap-4 animate-in slide-in-from-top-4 duration-500">
+          <div className="flex items-start gap-5 text-red-400">
+            <AlertCircle className="w-6 h-6 mt-1 shrink-0" />
+            <div className="space-y-1">
+              <h4 className="font-bold text-white tracking-tight">System Configuration Error</h4>
+              <p className="text-sm font-medium text-red-400/80 leading-relaxed">{error}</p>
+            </div>
           </div>
+          {error.toLowerCase().includes('bucket') && (
+            <div className="ml-11 p-4 rounded-2xl bg-black/40 border border-red-500/10 text-sm font-medium text-slate-300">
+              <p className="font-bold text-white mb-2">How to fix this in Supabase:</p>
+              <ol className="list-decimal list-inside space-y-1.5 opacity-80">
+                <li>Go to your Supabase Project Dashboard</li>
+                <li>Click on <b>"Storage"</b> in the left sidebar</li>
+                <li>Click <b>"New Bucket"</b></li>
+                <li>Name it exactly: <code className="text-red-400 font-bold bg-red-500/10 px-1.5 py-0.5 rounded">resumes</code></li>
+                <li>Toggle <b>"Public bucket"</b> to ON, then click Save</li>
+              </ol>
+            </div>
+          )}
         </div>
       )}
 
