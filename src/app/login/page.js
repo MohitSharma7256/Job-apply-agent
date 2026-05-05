@@ -24,13 +24,52 @@ export default function LoginPage() {
   useEffect(() => {
     const restoreSession = async () => {
       try {
-        const { data, error } = await supabase.auth.getSessionFromUrl();
-        if (error && !error.message.includes('No auth session')) {
-          setError(error.message);
-          return;
+        // Check for OAuth callback in URL hash (implicit flow)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        
+        if (accessToken) {
+          // OAuth callback from Google - implicit flow
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || ''
+          });
+          
+          if (error) {
+            setError(error.message);
+            return;
+          }
+          
+          if (data.session?.access_token) {
+            setAuthToken(data.session.access_token);
+            router.replace('/dashboard');
+            return;
+          }
         }
 
-        const session = data?.session || (await supabase.auth.getSession()).data?.session;
+        // Check for OAuth code in URL (PKCE flow)
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        
+        if (code) {
+          // OAuth PKCE flow - let Supabase handle the exchange
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          
+          if (error) {
+            setError(error.message);
+            return;
+          }
+          
+          if (data.session?.access_token) {
+            setAuthToken(data.session.access_token);
+            router.replace('/dashboard');
+            return;
+          }
+        }
+
+        // Check for existing session
+        const { data: { session } } = await supabase.auth.getSession();
         if (session?.access_token) {
           setAuthToken(session.access_token);
           router.replace('/dashboard');
@@ -102,15 +141,25 @@ export default function LoginPage() {
     setError('');
     setIsLoading(true);
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/login`
-      }
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/login`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
+      });
 
-    if (error) {
-      setError(error.message);
+      if (error) {
+        setError(error.message);
+        setIsLoading(false);
+      }
+      // OAuth redirect will happen automatically
+    } catch (err) {
+      setError('Failed to initiate OAuth login');
       setIsLoading(false);
     }
   };
