@@ -1,6 +1,6 @@
 import { withCorrelationId, successResponse, ValidationError } from '@/shared/errors';
 import { logger, measurePerformance } from '@/shared/logger';
-import { dbService, supabase } from '@/services/dbService.js';
+import { dbService, getSupabaseAdmin } from '@/services/dbService.js';
 import { getQueueStats, QUEUES } from '@/shared/queue.js';
 
 export const GET = withCorrelationId(async (request) => {
@@ -125,6 +125,7 @@ export const POST = withCorrelationId(async (request) => {
 // Database health check
 const checkDatabase = measurePerformance('database_health', async () => {
   try {
+    const supabase = getSupabaseAdmin();
     if (!supabase) {
       return 'not_configured';
     }
