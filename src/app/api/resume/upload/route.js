@@ -27,31 +27,32 @@ export async function POST(request) {
 
     const fileName = `${userId}/${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
     
-    let { data: uploadData, error: uploadError } = await supabase.storage
+    const uploadToResumes = () => supabase.storage
       .from('resumes')
       .upload(fileName, buffer, {
         contentType: file.type,
         upsert: true
       });
 
-    // Auto-create bucket if missing and retry
-    if (uploadError && uploadError.message.toLowerCase().includes('bucket not found')) {
-      console.log('🔄 Bucket "resumes" missing. Auto-creating public bucket...');
+    let { data: uploadData, error: uploadError } = await uploadToResumes();
+
+    const bucketMissing = uploadError?.message?.toLowerCase().includes('bucket not found')
+      || uploadError?.message?.toLowerCase().includes('bucket does not exist')
+      || uploadError?.message?.toLowerCase().includes('storage bucket');
+
+    if (bucketMissing) {
+      console.log('🔄 Bucket "resumes" missing or unavailable. Ensuring public bucket exists...');
       const { error: createError } = await supabase.storage.createBucket('resumes', { public: true });
-      
-      if (createError) {
+
+      if (createError && !/already exists|exists/i.test(createError.message || '')) {
         console.error('❌ Failed to auto-create bucket:', createError);
-        return NextResponse.json({ success: false, error: 'Failed to create storage bucket automatically. Please create a PUBLIC bucket named "resumes" in Supabase Storage.' }, { status: 200 });
+        return NextResponse.json({
+          success: false,
+          error: `Failed to create storage bucket automatically: ${createError.message}`
+        }, { status: 200 });
       }
-      
-      // Retry upload
-      const retry = await supabase.storage
-        .from('resumes')
-        .upload(fileName, buffer, {
-          contentType: file.type,
-          upsert: true
-        });
-        
+
+      const retry = await uploadToResumes();
       uploadData = retry.data;
       uploadError = retry.error;
     }

@@ -1,5 +1,5 @@
 import { Worker } from 'bullmq';
-import { redis } from '../src/shared/redis.js';
+import { redis, createRedisConnection } from '../src/shared/redis.js';
 import { JobTracker } from '../src/shared/queue.js';
 import { processJobSearch } from './processors/jobSearchProcessor.js';
 import { processResumeTailor } from './processors/resumeTailorProcessor.js';
@@ -8,8 +8,9 @@ import { processAIRequest } from './processors/aiProcessor.js';
 import { processWebAutomation } from './processors/webAutomationProcessor.js';
 
 // Optimized Worker Configuration for Render
-const WORKER_OPTIONS = {
-  connection: redis,
+// IMPORTANT: Each worker MUST have its own dedicated Redis connection for blocking commands (BLPOP)
+const getWorkerOptions = () => ({
+  connection: createRedisConnection(),
   concurrency: 1, // Step 5: Absolute minimum concurrency for Puppeteer stability
   removeOnComplete: { count: 100 },
   removeOnFail: { count: 100 },
@@ -18,7 +19,7 @@ const WORKER_OPTIONS = {
     duration: 1000 // Rate limiting: Max 5 jobs per second
   },
   timeout: 120000 // Timeout: Fail job if it takes longer than 2 minutes
-};
+});
 
 // Queue names
 const QUEUES = {
@@ -57,7 +58,7 @@ const createWorker = (name, processor) => {
       }
       throw error;
     }
-  }, WORKER_OPTIONS);
+  }, getWorkerOptions());
 
   worker.on('error', (err) => {
     console.error(`❌ [${name}] Worker Error:`, err.message);

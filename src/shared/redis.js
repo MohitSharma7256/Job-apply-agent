@@ -1,9 +1,6 @@
 import Redis from 'ioredis';
 
-// Use globalThis singleton pattern to prevent Next.js from creating multiple connections during re-imports
-export const getRedisInstance = () => {
-  if (globalThis.redisInstance) return globalThis.redisInstance;
-
+export const createRedisConnection = () => {
   const redisUrl = process.env.REDIS_URL;
   
   if (!redisUrl) {
@@ -31,9 +28,18 @@ export const getRedisInstance = () => {
   });
 
   instance.on('error', (err) => {
-    console.error('❌ Global Redis Error:', err.message);
+    console.error('❌ Redis Connection Error:', err.message);
   });
 
+  return instance;
+};
+
+// Use globalThis singleton pattern to prevent Next.js from creating multiple connections during re-imports
+export const getRedisInstance = () => {
+  if (globalThis.redisInstance) return globalThis.redisInstance;
+
+  const instance = createRedisConnection();
+  
   instance.on('connect', () => {
     console.log('✅ Global Redis Instance Connected');
   });

@@ -36,14 +36,8 @@ export const queues = {
   [QUEUES.DEAD_LETTER]: new Queue(QUEUES.DEAD_LETTER, queueConfig),
 };
 
-// Create queue events for monitoring (all share the same connection)
-export const queueEvents = {
-  [QUEUES.JOB_SEARCH]: new QueueEvents(QUEUES.JOB_SEARCH, { connection: redis }),
-  [QUEUES.RESUME_TAILOR]: new QueueEvents(QUEUES.RESUME_TAILOR, { connection: redis }),
-  [QUEUES.JOB_APPLY]: new QueueEvents(QUEUES.JOB_APPLY, { connection: redis }),
-  [QUEUES.AI_PROCESSING]: new QueueEvents(QUEUES.AI_PROCESSING, { connection: redis }),
-  [QUEUES.WEB_AUTOMATION]: new QueueEvents(QUEUES.WEB_AUTOMATION, { connection: redis }),
-};
+// Removed QueueEvents because they require dedicated connections and use blocking SUBSCRIBE commands
+// which chokes free-tier Redis instances. Progress tracking is handled via other means.
 
 // Job status tracking
 export class JobTracker {
@@ -261,7 +255,6 @@ export async function shutdownQueues() {
   console.log('🔄 Shutting down BullMQ queues...');
   try {
     await Promise.all(Object.values(queues).map(queue => queue.close()));
-    await Promise.all(Object.values(queueEvents).map(events => events.close()));
     console.log('✅ BullMQ queues shut down successfully');
   } catch (error) {
     console.error('❌ Error shutting down queues:', error.message);
