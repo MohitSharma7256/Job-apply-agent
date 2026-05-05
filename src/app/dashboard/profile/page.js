@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { User, Mail, Phone, Briefcase, MapPin, Save, Loader2, Target, Plus, X, Zap } from "lucide-react";
-import { authFetch } from "@/lib/apiClient";
+import { authFetch, getAuthToken } from "@/lib/apiClient";
 
 export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
@@ -22,8 +22,27 @@ export default function ProfilePage() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
+        const token = getAuthToken();
+        console.log('[ProfilePage] Auth token exists:', !!token);
+        
+        if (!token) {
+          console.error('[ProfilePage] No auth token found');
+          return;
+        }
+        
         const response = await authFetch('/api/profile');
         const data = await response.json();
+        
+        if (!response.ok) {
+          if (data.requiresAuth) {
+            console.error('[ProfilePage] Authentication required:', data.error);
+            // Optionally redirect to login or show auth error
+            return;
+          }
+          console.error('[ProfilePage] API error:', data.error);
+          return;
+        }
+        
         if (data.success && data.profile) {
           setProfile(prev => ({
             ...prev,

@@ -1,11 +1,32 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/Sidebar';
 import { Menu, Zap } from 'lucide-react';
+import { getAuthToken } from '@/lib/apiClient';
 
 export default function DashboardLayout({ children }) {
+  const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const token = getAuthToken();
+    if (!token) {
+      router.replace('/login');
+    } else {
+      setIsLoading(false);
+    }
+  }, [router]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen bg-slate-950 items-center justify-center">
+        <div className="text-slate-400">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-slate-950">

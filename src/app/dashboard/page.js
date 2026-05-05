@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { authFetch } from "@/lib/apiClient";
+import { authFetch, getAuthToken } from "@/lib/apiClient";
 import {
   Search, Loader2, Rocket, Brain, User, FileText, History, BarChart3, ArrowRight, Table, Sparkles, MapPin, Briefcase
 } from "lucide-react";
@@ -31,6 +31,9 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const token = getAuthToken();
+        console.log('[Dashboard] Auth token exists:', !!token);
+        
         const [jobsRes, profileRes] = await Promise.all([
           authFetch('/api/jobs/list'),
           authFetch('/api/profile')

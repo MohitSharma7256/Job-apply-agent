@@ -76,9 +76,24 @@ export function withAuth(handler) {
       return await handler(request, context);
     } catch (error) {
       console.error('Auth middleware error:', error);
+      
+      // Provide more helpful error messages
+      let errorMessage = error.message || 'Authentication failed';
+      let errorDetails = null;
+      
+      if (!authorization) {
+        errorMessage = 'No authentication token provided';
+        errorDetails = 'Please log in to access this resource. Your session may have expired.';
+      } else if (error.message.includes('Invalid or expired')) {
+        errorMessage = 'Authentication token expired or invalid';
+        errorDetails = 'Please log in again to refresh your session.';
+      }
+      
       return new Response(JSON.stringify({
         success: false,
-        error: error.message || 'Authentication failed'
+        error: errorMessage,
+        details: errorDetails,
+        requiresAuth: true
       }), {
         status: error.statusCode || 401,
         headers: { 'Content-Type': 'application/json' }
