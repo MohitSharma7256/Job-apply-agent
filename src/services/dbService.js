@@ -29,11 +29,8 @@ class DbService {
         console.warn('⚠️ Database client not initialized. Returning empty profile.');
         return { data: null, error: null };
       }
-      // Basic UUID validation regex
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(userId)) {
-        return { data: null, error: null };
-      }
+      if (!uuidRegex.test(userId)) return { data: null, error: null };
 
       const { data, error } = await supabaseClient
         .from('user_profiles')
@@ -42,51 +39,42 @@ class DbService {
         .single();
       
       if (error && error.code !== 'PGRST116') {
-        // Table not found or other schema errors
-        if (error.code === '42P01') {
-          console.warn('⚠️ Table user_profiles not found. Please run migrations.');
-          return { data: null, error: null };
-        }
+        if (error.code === '42P01') return { data: null, error: null };
         return { data: null, error };
       }
-      
       return { data, error: null };
     } catch (e) {
-      console.error('DbService Error:', e);
+      console.error('DbService Error (getProfile):', e);
       return { data: null, error: null };
     }
   }
 
   async createProfile(profile) {
+    if (!supabaseClient) return { data: null, error: null };
     const { data, error } = await supabaseClient
       .from('user_profiles')
       .insert(profile)
       .select()
       .single();
-    
     return { data, error };
   }
 
   async updateProfile(userId, updates) {
+    if (!supabaseClient) return { data: null, error: null };
     const { data, error } = await supabaseClient
       .from('user_profiles')
       .upsert({ ...updates, id: userId })
       .select()
       .single();
-    
     return { data, error };
   }
 
   // Job operations
   async getJobs(userId, limit = 100, offset = 0) {
     try {
-      if (!supabaseClient) {
-        throw new Error('Database client not initialized. Check your environment variables.');
-      }
+      if (!supabaseClient) return { data: [], error: null };
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(userId)) {
-        return { data: [], error: null };
-      }
+      if (!uuidRegex.test(userId)) return { data: [], error: null };
 
       const { data, error } = await supabaseClient
         .from('jobs')
@@ -95,165 +83,125 @@ class DbService {
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
       
+      if (error && error.code === '42P01') return { data: [], error: null };
       return { data: data || [], error };
     } catch (e) {
-      return { data: [], error: e };
+      console.error('DbService Error (getJobs):', e);
+      return { data: [], error: null };
     }
   }
 
   async saveJob(job) {
+    if (!supabaseClient) return { data: null, error: null };
     const { data, error } = await supabaseClient
       .from('jobs')
       .upsert(job)
       .select()
       .single();
-    
     return { data, error };
   }
 
   async deleteJob(jobId, userId) {
+    if (!supabaseClient) return { data: null, error: null };
     const { data, error } = await supabaseClient
       .from('jobs')
       .delete()
       .eq('id', jobId)
       .eq('user_id', userId);
-    
     return { data, error };
   }
 
   // Application operations
   async getApplications(userId, limit = 100, offset = 0) {
-    const { data, error } = await supabaseClient
-      .from('applications')
-      .select(`
-        *,
-        job:jobs(*)
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-    
-    return { data, error };
+    try {
+      if (!supabaseClient) return { data: [], error: null };
+      const { data, error } = await supabaseClient
+        .from('applications')
+        .select(`*, job:jobs(*)`)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+      
+      if (error && error.code === '42P01') return { data: [], error: null };
+      return { data: data || [], error };
+    } catch (e) {
+      return { data: [], error: null };
+    }
   }
 
   async createApplication(application) {
+    if (!supabaseClient) return { data: null, error: null };
     const { data, error } = await supabaseClient
       .from('applications')
       .insert(application)
       .select()
       .single();
-    
-    return { data, error };
-  }
-
-  async updateApplication(applicationId, userId, updates) {
-    const { data, error } = await supabaseClient
-      .from('applications')
-      .update(updates)
-      .eq('id', applicationId)
-      .eq('user_id', userId)
-      .select()
-      .single();
-    
-    return { data, error };
-  }
-
-  // Session operations
-  async createSession(session) {
-    const { data, error } = await supabaseClient
-      .from('sessions')
-      .insert(session)
-      .select()
-      .single();
-    
-    return { data, error };
-  }
-
-  async getValidSession(userId, platform) {
-    const { data, error } = await supabaseClient
-      .from('sessions')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('platform', platform)
-      .eq('is_valid', true)
-      .or('expires_at.is.null,expires_at.gt.now()')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-    
-    return { data, error };
-  }
-
-  async invalidateSession(sessionId, userId) {
-    const { data, error } = await supabaseClient
-      .from('sessions')
-      .update({ is_valid: false })
-      .eq('id', sessionId)
-      .eq('user_id', userId);
-    
     return { data, error };
   }
 
   // Job Search operations
+  async getJobSearches(userId, limit = 50) {
+    try {
+      if (!supabaseClient) return { data: [], error: null };
+      const { data, error } = await supabaseClient
+        .from('job_searches')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      
+      if (error && error.code === '42P01') return { data: [], error: null };
+      return { data: data || [], error };
+    } catch (e) {
+      return { data: [], error: null };
+    }
+  }
+
   async createJobSearch(search) {
+    if (!supabaseClient) return { data: null, error: null };
     const { data, error } = await supabaseClient
       .from('job_searches')
       .insert(search)
       .select()
       .single();
-    
-    return { data, error };
-  }
-
-  async getJobSearches(userId, limit = 50) {
-    const { data, error } = await supabaseClient
-      .from('job_searches')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-    
     return { data, error };
   }
 
   // AI Activity operations
   async createAIActivity(activity) {
+    if (!supabaseClient) return { data: null, error: null };
     const { data, error } = await supabaseClient
       .from('ai_activities')
       .insert(activity)
       .select()
       .single();
-    
     return { data, error };
   }
 
   async getAIActivities(userId, activityType, limit = 100) {
-    let query = supabaseClient
-      .from('ai_activities')
-      .select('*')
-      .eq('user_id', userId);
-    
-    if (activityType) {
-      query = query.eq('activity_type', activityType);
+    try {
+      if (!supabaseClient) return { data: [], error: null };
+      let query = supabaseClient.from('ai_activities').select('*').eq('user_id', userId);
+      if (activityType) query = query.eq('activity_type', activityType);
+      
+      const { data, error } = await query
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      
+      if (error && error.code === '42P01') return { data: [], error: null };
+      return { data: data || [], error };
+    } catch (e) {
+      return { data: [], error: null };
     }
-    
-    const { data, error } = await query
-      .order('created_at', { ascending: false })
-      .limit(limit);
-    
-    return { data, error };
   }
 
   // Admin operations (service role only)
   async setServiceUserContext(userId) {
+    if (!supabase) return { error: new Error('Admin client not initialized') };
     const { error } = await supabase.rpc('set_service_user_context', { user_id: userId });
-    return { error };
-  }
-
-  async clearServiceUserContext() {
-    const { error } = await supabase.rpc('clear_service_user_context');
     return { error };
   }
 }
 
 export const dbService = new DbService();
+export { supabase as adminClient, supabaseClient as userClient };

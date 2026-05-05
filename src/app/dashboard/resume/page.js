@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { 
   Upload, FileText, CheckCircle2, Loader2, Sparkles, 
-  Trash2, Eye, Mail, Plus, Wand2, Save, X 
+  Trash2, Eye, Mail, Plus, Wand2, Save, X, AlertCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,28 +17,48 @@ export default function ResumePage() {
   
   const [resumes, setResumes] = useState([]);
   const [coverLetters, setCoverLetters] = useState([]);
+  const [error, setError] = useState(null);
   
   const fileInputRef = useRef(null);
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     setIsUploading(true);
-    // Simulating real upload process
-    setTimeout(() => {
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      // Mock userId for now, will use real auth later
+      formData.append('userId', '00000000-0000-0000-0000-000000000000');
+
+      const response = await fetch('/api/resume/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        const newResume = {
+          id: Date.now().toString(),
+          name: data.fileName,
+          size: data.size,
+          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          url: data.url
+        };
+        setResumes([newResume, ...resumes]);
+      } else {
+        setError(data.error || 'Upload failed. Check if "resumes" bucket exists in Supabase.');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
       setIsUploading(false);
-      const newResume = {
-        id: Date.now().toString(),
-        name: file.name,
-        size: (file.size / (1024 * 1024)).toFixed(1) + " MB",
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        isDefault: resumes.length === 0
-      };
-      setResumes([newResume, ...resumes]);
-      // Reset input
-      e.target.value = '';
-    }, 1500);
+      e.target.value = ''; // Reset input
+    }
   };
 
   const handleSaveCoverLetter = () => {
@@ -74,9 +94,16 @@ export default function ResumePage() {
       <header className="space-y-2">
         <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">Resume & Assets</h1>
         <p className="text-slate-500 max-w-2xl text-sm md:text-base">
-          Upload your resume and manage cover letters. AI uses these assets to personalize every application.
+          Real-time resume management. AI uses these to tailor your applications.
         </p>
       </header>
+
+      {error && (
+        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center gap-3 text-red-400 animate-in slide-in-from-top-2">
+          <AlertCircle className="w-5 h-5 shrink-0" />
+          <p className="text-sm font-bold">{error}</p>
+        </div>
+      )}
 
       {/* Hidden File Input */}
       <input 
@@ -101,14 +128,17 @@ export default function ResumePage() {
             </div>
 
             <div 
-              className="p-10 md:p-16 rounded-[32px] bg-white/5 border-2 border-dashed border-white/10 hover:border-blue-500/40 transition-all flex flex-col items-center justify-center group cursor-pointer relative overflow-hidden"
-              onClick={() => fileInputRef.current.click()}
+              className={cn(
+                "p-10 md:p-16 rounded-[32px] bg-white/5 border-2 border-dashed transition-all flex flex-col items-center justify-center group cursor-pointer relative overflow-hidden",
+                isUploading ? "border-blue-500/50 bg-blue-500/5" : "border-white/10 hover:border-blue-500/40"
+              )}
+              onClick={() => !isUploading && fileInputRef.current.click()}
             >
               <div className="h-20 w-20 rounded-3xl bg-blue-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
                 {isUploading ? <Loader2 className="h-10 w-10 text-blue-400 animate-spin" /> : <Upload className="h-10 w-10 text-blue-400" />}
               </div>
               <h3 className="text-xl font-bold text-white mb-2 text-center">
-                {isUploading ? "Uploading Resume..." : "Click to select a file"}
+                {isUploading ? "Uploading to Server..." : "Upload Real Resume"}
               </h3>
               <p className="text-slate-500 text-sm text-center">PDF, DOCX or TXT (Max 5MB)</p>
             </div>
@@ -125,9 +155,16 @@ export default function ResumePage() {
                       <p className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">{resume.size} • {resume.date}</p>
                     </div>
                   </div>
-                  <button onClick={(e) => { e.stopPropagation(); setResumes(resumes.filter(r => r.id !== resume.id)) }} className="p-2 rounded-lg bg-red-500/10 text-red-400 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/20">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {resume.url && (
+                      <a href={resume.url} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-white/5 text-slate-400 hover:text-white transition-all">
+                        <Eye className="w-4 h-4" />
+                      </a>
+                    )}
+                    <button onClick={(e) => { e.stopPropagation(); setResumes(resumes.filter(r => r.id !== resume.id)) }} className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -150,8 +187,8 @@ export default function ResumePage() {
             {coverLetters.length === 0 ? (
               <div className="p-12 rounded-[32px] bg-white/[0.02] border border-dashed border-white/5 flex flex-col items-center justify-center text-center">
                 <Mail className="w-10 h-10 text-slate-700 mb-4" />
-                <h3 className="text-lg font-bold text-slate-400">No Cover Letters Found</h3>
-                <p className="text-slate-600 text-sm max-w-xs mt-1">Create a custom cover letter or use AI to generate one.</p>
+                <h3 className="text-lg font-bold text-slate-400">No Cover Letters</h3>
+                <p className="text-slate-600 text-sm max-w-xs mt-1">Manual create or AI generate</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -166,7 +203,7 @@ export default function ResumePage() {
                         <p className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">{cl.size} • {cl.date}</p>
                       </div>
                     </div>
-                    <button onClick={() => setCoverLetters(coverLetters.filter(c => c.id !== cl.id))} className="p-2 rounded-lg bg-red-500/10 text-red-400 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/20">
+                    <button onClick={() => setCoverLetters(coverLetters.filter(c => c.id !== cl.id))} className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -181,13 +218,13 @@ export default function ResumePage() {
           <div className="p-8 rounded-[32px] bg-gradient-to-br from-blue-600/10 to-purple-600/10 border border-white/10 relative overflow-hidden group">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <Sparkles className="w-8 h-8 text-blue-400/50 mb-6" />
-            <h3 className="text-xl font-bold text-white mb-4 tracking-tight text-center lg:text-left">AI Optimization</h3>
-            <p className="text-slate-400 text-sm leading-relaxed mb-6 text-center lg:text-left">
-              AI parses your resume to extract key skills and matches them against target jobs for higher success rates.
+            <h3 className="text-xl font-bold text-white mb-4 tracking-tight">AI Tailoring</h3>
+            <p className="text-slate-400 text-sm leading-relaxed mb-6">
+              When you upload a real resume, our AI parses it to match job requirements automatically.
             </p>
             <div className="space-y-4">
-              <div className="flex items-center gap-3 text-sm text-slate-300 font-medium justify-center lg:justify-start">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Documents Ready
+              <div className="flex items-center gap-3 text-sm text-slate-300 font-medium">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Server Connected
               </div>
             </div>
           </div>
@@ -202,7 +239,7 @@ export default function ResumePage() {
             <div className="p-8 border-b border-white/5 flex items-center justify-between">
               <div>
                 <h3 className="text-2xl font-bold text-white">Create Cover Letter</h3>
-                <p className="text-slate-500 text-sm mt-1">Manual entry or AI generation</p>
+                <p className="text-slate-500 text-sm mt-1">Choose your creation method</p>
               </div>
               <button onClick={() => setShowCoverLetterModal(false)} className="p-2 rounded-full hover:bg-white/5 text-slate-500 hover:text-white transition-all">
                 <X className="w-6 h-6" />
@@ -231,8 +268,8 @@ export default function ResumePage() {
                     <Sparkles className="w-10 h-10 text-purple-400" />
                   </div>
                   <div>
-                    <h4 className="text-xl font-bold text-white">Let AI Write It</h4>
-                    <p className="text-slate-500 text-sm max-w-sm mt-2">Professional cover letter based on your resume and target roles.</p>
+                    <h4 className="text-xl font-bold text-white">Generate with AI</h4>
+                    <p className="text-slate-500 text-sm max-w-sm mt-2">AI will write a professional cover letter based on your resume.</p>
                   </div>
                   <button 
                     onClick={generateAICoverLetter}
@@ -240,20 +277,20 @@ export default function ResumePage() {
                     className="px-10 py-4 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-black shadow-lg shadow-purple-600/20 transition-all flex items-center gap-2"
                   >
                     {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Wand2 className="w-5 h-5" />}
-                    {isGenerating ? "Writing..." : "Generate with AI"}
+                    {isGenerating ? "Writing..." : "Generate Now"}
                   </button>
                 </div>
               ) : (
                 <div className="space-y-4">
                   <input 
                     className="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 outline-none focus:border-blue-500/50 transition-all text-white font-bold"
-                    placeholder="Document Title (e.g., Job_App_CL)"
+                    placeholder="Document Title"
                     value={currentCoverLetter.title}
                     onChange={e => setCurrentCoverLetter({...currentCoverLetter, title: e.target.value})}
                   />
                   <textarea 
                     className="w-full h-64 bg-black/40 border border-white/10 rounded-2xl px-5 py-4 outline-none focus:border-blue-500/50 transition-all text-white font-medium resize-none"
-                    placeholder="Paste your cover letter content here..."
+                    placeholder="Content here..."
                     value={currentCoverLetter.content}
                     onChange={e => setCurrentCoverLetter({...currentCoverLetter, content: e.target.value})}
                   />
@@ -261,7 +298,7 @@ export default function ResumePage() {
                     onClick={handleSaveCoverLetter}
                     className="w-full py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2"
                   >
-                    <Save className="w-5 h-5" /> Save Document
+                    <Save className="w-5 h-5" /> Save to Assets
                   </button>
                 </div>
               )}

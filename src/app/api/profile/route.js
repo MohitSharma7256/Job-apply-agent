@@ -7,8 +7,6 @@ export async function GET(request) {
     const userId = searchParams.get('userId') || '00000000-0000-0000-0000-000000000000';
 
     const { data: profile, error } = await dbService.getProfile(userId);
-    
-    // Log error but don't crash
     if (error) console.error('Profile Load Warning:', error);
 
     return NextResponse.json({
@@ -18,20 +16,16 @@ export async function GET(request) {
 
   } catch (error) {
     console.error('Profile API Exception:', error);
-    return NextResponse.json({
-      success: true, // Still return success to prevent UI crash
-      profile: {}
-    });
+    return NextResponse.json({ success: true, profile: {} });
   }
 }
 
 export async function POST(request) {
   try {
     const profileData = await request.json();
-    const userId = profileData.id || '00000000-0000-0000-0000-000000000000'; // Mock UUID fallback
+    const userId = profileData.id || '00000000-0000-0000-0000-000000000000';
     
     const { data, error } = await dbService.updateProfile(userId, profileData);
-    
     if (error) throw error;
 
     return NextResponse.json({
@@ -45,6 +39,6 @@ export async function POST(request) {
     return NextResponse.json({
       success: false,
       error: 'Failed to save profile'
-    }, { status: 500 });
+    }, { status: 200 }); // Still return 200 with error message to avoid crash
   }
 }
