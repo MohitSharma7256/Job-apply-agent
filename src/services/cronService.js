@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { supabase } from './dbService.js';
+import { getSupabaseAdmin } from './dbService.js';
 
 class CronService {
   constructor() {
@@ -15,6 +15,12 @@ class CronService {
         console.log('[Cron] Running keep-alive ping at', new Date().toISOString());
         
         // Ping Supabase to keep connection alive
+        const supabase = getSupabaseAdmin();
+        if (!supabase) {
+          console.error('[Cron] Supabase not available for keep-alive');
+          return;
+        }
+        
         const { data, error } = await supabase
           .from('jobs')
           .select('id')

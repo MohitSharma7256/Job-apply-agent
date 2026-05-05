@@ -1,9 +1,12 @@
-import { supabase } from './dbService';
+import { getSupabaseAdmin } from './dbService';
 import { encrypt, decrypt } from '../lib/encryption';
 
 class LoginManager {
   async saveSession(userId, platform, sessionData) {
     try {
+      const supabase = getSupabaseAdmin();
+      if (!supabase) return false;
+      
       const encryptedData = encrypt(JSON.stringify(sessionData));
       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -28,6 +31,9 @@ class LoginManager {
 
   async getSession(userId, platform) {
     try {
+      const supabase = getSupabaseAdmin();
+      if (!supabase) return null;
+      
       const { data, error } = await supabase
         .from('sessions')
         .select('*')
@@ -50,6 +56,9 @@ class LoginManager {
   }
 
   async markSessionExpired(userId, platform) {
+    const supabase = getSupabaseAdmin();
+    if (!supabase) return;
+    
     await supabase
       .from('sessions')
       .update({ is_valid: false })
