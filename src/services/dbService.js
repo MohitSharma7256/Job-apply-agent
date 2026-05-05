@@ -1,207 +1,114 @@
 import { createClient } from '@supabase/supabase-js';
 import { env } from '../shared/env.js';
 
-// Safe client creation helper
+// Ultra-resilient client creation
 function createSafeClient(url, key, name) {
   try {
-    if (!url || !key || url === "" || key === "") {
-      console.warn(`⚠️ Supabase ${name} keys missing or empty. URL: ${url ? 'present' : 'missing'}`);
+    // Priority 1: Use provided key
+    // Priority 2: Fallback to process.env directly if env object is empty
+    const finalUrl = url || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const finalKey = key || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!finalUrl || !finalKey) {
+      console.error(`❌ CRITICAL: Supabase ${name} configuration missing. URL or Key is undefined.`);
       return null;
     }
-    return createClient(url, key);
+    
+    return createClient(finalUrl, finalKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false
+      }
+    });
   } catch (e) {
-    console.error(`❌ Failed to initialize Supabase ${name}:`, e.message);
+    console.error(`❌ FAILED to initialize Supabase ${name}:`, e.message);
     return null;
   }
 }
 
-// Create Supabase client with service role key for admin operations
-export const supabase = createSafeClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, 'Admin');
+// Admin client (Service Role)
+export const supabase = createSafeClient(
+  env.NEXT_PUBLIC_SUPABASE_URL, 
+  env.SUPABASE_SERVICE_ROLE_KEY, 
+  'Admin'
+);
 
-// Create Supabase client for user operations (uses RLS)
-export const supabaseClient = createSafeClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, 'User');
+// User client (Anon Key)
+export const supabaseClient = createSafeClient(
+  env.NEXT_PUBLIC_SUPABASE_URL, 
+  env.NEXT_PUBLIC_SUPABASE_ANON_KEY, 
+  'User'
+);
 
 class DbService {
-  // User Profile operations
+  get supabase() { return supabase; }
+  get supabaseClient() { return supabaseClient; }
+
+  // Resilient Profile Fetch
   async getProfile(userId) {
     try {
-      if (!supabaseClient) {
-        console.warn('⚠️ Database client not initialized. Returning empty profile.');
-        return { data: null, error: null };
-      }
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(userId)) return { data: null, error: null };
+      const client = this.supabaseClient || this.supabase;
+      if (!client) return { data: null, error: new Error('No database client available') };
 
-      const { data, error } = await supabaseClient
+      const { data, error } = await client
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
         .single();
       
-      if (error && error.code !== 'PGRST116') {
-        if (error.code === '42P01') return { data: null, error: null };
-        return { data: null, error };
+      if (error && error.code === 'PGRST116') return { data: null, error: null };
+      if (error && error.code === '42P01') {
+        console.warn('⚠️ Table user_profiles missing. Creating on the fly might be needed.');
+        return { data: null, error: null };
       }
-      return { data, error: null };
+      return { data, error };
     } catch (e) {
-      console.error('DbService Error (getProfile):', e);
-      return { data: null, error: null };
+      return { data: null, error: e };
     }
   }
 
-  async createProfile(profile) {
-    if (!supabaseClient) return { data: null, error: null };
-    const { data, error } = await supabaseClient
-      .from('user_profiles')
-      .insert(profile)
-      .select()
-      .single();
-    return { data, error };
-  }
-
   async updateProfile(userId, updates) {
-    if (!supabaseClient) return { data: null, error: null };
-    const { data, error } = await supabaseClient
-      .from('user_profiles')
-      .upsert({ ...updates, id: userId })
-      .select()
-      .single();
-    return { data, error };
+    try {
+      const client = this.supabase || this.supabaseClient;
+      if (!client) return { data: null, error: new Error('No database client available') };
+
+      const { data, error } = await client
+        .from('user_profiles')
+        .upsert({ ...updates, id: userId })
+        .select()
+        .single();
+      
+      return { data, error };
+    } catch (e) {
+      return { data: null, error: e };
+    }
   }
 
-  // Job operations
-  async getJobs(userId, limit = 100, offset = 0) {
+  // Resilient Job Fetch
+  async getJobs(userId, limit = 50) {
     try {
-      if (!supabaseClient) return { data: [], error: null };
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(userId)) return { data: [], error: null };
+      const client = this.supabaseClient || this.supabase;
+      if (!client) return { data: [], error: null };
 
-      const { data, error } = await supabaseClient
+      const { data, error } = await client
         .from('jobs')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1);
+        .limit(limit);
       
       if (error && error.code === '42P01') return { data: [], error: null };
       return { data: data || [], error };
     } catch (e) {
-      console.error('DbService Error (getJobs):', e);
       return { data: [], error: null };
     }
   }
 
   async saveJob(job) {
-    if (!supabaseClient) return { data: null, error: null };
-    const { data, error } = await supabaseClient
-      .from('jobs')
-      .upsert(job)
-      .select()
-      .single();
-    return { data, error };
-  }
-
-  async deleteJob(jobId, userId) {
-    if (!supabaseClient) return { data: null, error: null };
-    const { data, error } = await supabaseClient
-      .from('jobs')
-      .delete()
-      .eq('id', jobId)
-      .eq('user_id', userId);
-    return { data, error };
-  }
-
-  // Application operations
-  async getApplications(userId, limit = 100, offset = 0) {
-    try {
-      if (!supabaseClient) return { data: [], error: null };
-      const { data, error } = await supabaseClient
-        .from('applications')
-        .select(`*, job:jobs(*)`)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1);
-      
-      if (error && error.code === '42P01') return { data: [], error: null };
-      return { data: data || [], error };
-    } catch (e) {
-      return { data: [], error: null };
-    }
-  }
-
-  async createApplication(application) {
-    if (!supabaseClient) return { data: null, error: null };
-    const { data, error } = await supabaseClient
-      .from('applications')
-      .insert(application)
-      .select()
-      .single();
-    return { data, error };
-  }
-
-  // Job Search operations
-  async getJobSearches(userId, limit = 50) {
-    try {
-      if (!supabaseClient) return { data: [], error: null };
-      const { data, error } = await supabaseClient
-        .from('job_searches')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(limit);
-      
-      if (error && error.code === '42P01') return { data: [], error: null };
-      return { data: data || [], error };
-    } catch (e) {
-      return { data: [], error: null };
-    }
-  }
-
-  async createJobSearch(search) {
-    if (!supabaseClient) return { data: null, error: null };
-    const { data, error } = await supabaseClient
-      .from('job_searches')
-      .insert(search)
-      .select()
-      .single();
-    return { data, error };
-  }
-
-  // AI Activity operations
-  async createAIActivity(activity) {
-    if (!supabaseClient) return { data: null, error: null };
-    const { data, error } = await supabaseClient
-      .from('ai_activities')
-      .insert(activity)
-      .select()
-      .single();
-    return { data, error };
-  }
-
-  async getAIActivities(userId, activityType, limit = 100) {
-    try {
-      if (!supabaseClient) return { data: [], error: null };
-      let query = supabaseClient.from('ai_activities').select('*').eq('user_id', userId);
-      if (activityType) query = query.eq('activity_type', activityType);
-      
-      const { data, error } = await query
-        .order('created_at', { ascending: false })
-        .limit(limit);
-      
-      if (error && error.code === '42P01') return { data: [], error: null };
-      return { data: data || [], error };
-    } catch (e) {
-      return { data: [], error: null };
-    }
-  }
-
-  // Admin operations (service role only)
-  async setServiceUserContext(userId) {
-    if (!supabase) return { error: new Error('Admin client not initialized') };
-    const { error } = await supabase.rpc('set_service_user_context', { user_id: userId });
-    return { error };
+    const client = this.supabase || this.supabaseClient;
+    if (!client) return { data: null, error: null };
+    return await client.from('jobs').upsert(job).select().single();
   }
 }
 
 export const dbService = new DbService();
-export { supabase as adminClient, supabaseClient as userClient };

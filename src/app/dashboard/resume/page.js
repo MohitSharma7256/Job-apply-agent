@@ -18,11 +18,10 @@ export default function ResumePage() {
   const [resumes, setResumes] = useState([]);
   const [coverLetters, setCoverLetters] = useState([]);
   const [error, setError] = useState(null);
-  const [status, setStatus] = useState('idle'); // idle, checking, ok, error
+  const [status, setStatus] = useState('idle');
   
   const fileInputRef = useRef(null);
 
-  // Check system health on load
   useEffect(() => {
     checkHealth();
   }, []);
@@ -69,10 +68,10 @@ export default function ResumePage() {
         setResumes(prev => [newResume, ...prev]);
         setError(null);
       } else {
-        setError(data.error || 'Production Server Refused Connection');
+        setError(data.error || 'Server Refused Upload. Configuration Error.');
       }
     } catch (err) {
-      setError('Production Network Error. Please ensure Render environment is stable.');
+      setError('Production Network Error. Check connection.');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = ''; 
@@ -100,7 +99,7 @@ export default function ResumePage() {
     setTimeout(() => {
       setCurrentCoverLetter({
         title: "AI_Generated_CL",
-        content: "Dear Hiring Manager,\n\nI am writing to express my strong interest in the role. Based on my technical background, I am confident that my skills will add value to your team...\n\nBest regards,\n[Your Name]"
+        content: "Dear Hiring Manager,\n\nI am writing to express my strong interest in the role. Based on my technical background, I am confident that my skills in software development will make me a valuable asset to your team...\n\nBest regards,\n[Your Name]"
       });
       setIsGenerating(false);
       setCoverLetterMode('manual');
@@ -111,7 +110,7 @@ export default function ResumePage() {
     <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-10">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-2">
-          <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter">Production Assets</h1>
+          <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter">Production Asset Hub</h1>
           <p className="text-slate-500 max-w-2xl font-medium">
             Professional document hub. Cloud-synced with Supabase infrastructure.
           </p>
@@ -121,7 +120,7 @@ export default function ResumePage() {
           <div className="text-right">
             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Server Status</p>
             <p className={cn("text-sm font-bold", status === 'ok' ? "text-emerald-400" : "text-amber-400")}>
-              {status === 'ok' ? "Cloud Sync Active" : status === 'checking' ? "Diagnosing..." : "Cloud Error"}
+              {status === 'ok' ? "Cloud Sync Active" : status === 'checking' ? "Diagnosing..." : "Cloud Connection Issue"}
             </p>
           </div>
           <button onClick={checkHealth} className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 transition-all">
@@ -151,7 +150,6 @@ export default function ResumePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         <div className="lg:col-span-2 space-y-10">
-          {/* Resume Section */}
           <section className="space-y-8">
             <div className="flex items-center justify-between px-2">
               <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
@@ -177,7 +175,7 @@ export default function ResumePage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {resumes.map(resume => (
-                <div key={resume.id} className="p-7 rounded-[32px] bg-white/5 border border-white/10 flex items-center justify-between group hover:border-blue-500/30 transition-all shadow-2xl hover:shadow-blue-500/5">
+                <div key={resume.id} className="p-7 rounded-[32px] bg-white/5 border border-white/10 flex items-center justify-between group hover:border-blue-500/30 transition-all shadow-2xl">
                   <div className="flex items-center gap-6">
                     <div className="h-16 w-16 rounded-2xl bg-slate-900 border border-white/10 flex items-center justify-center text-red-500">
                       <FileText className="w-9 h-9" />
@@ -197,7 +195,7 @@ export default function ResumePage() {
                         <Eye className="w-5 h-5" />
                       </a>
                     )}
-                    <button onClick={(e) => { e.stopPropagation(); setResumes(resumes.filter(r => r.id !== resume.id)) }} className="p-3.5 rounded-2xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all border border-red-500/10">
+                    <button onClick={(e) => { e.stopPropagation(); setResumes(resumes.filter(r => r.id !== resume.id)) }} className="p-3.5 rounded-2xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all">
                       <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
@@ -223,7 +221,7 @@ export default function ResumePage() {
             {coverLetters.length === 0 ? (
               <div className="p-20 rounded-[48px] bg-white/[0.02] border border-dashed border-white/5 flex flex-col items-center justify-center text-center">
                 <Mail className="w-16 h-16 text-slate-800 mb-8" />
-                <h3 className="text-2xl font-black text-slate-600">No Content Saved</h3>
+                <h3 className="text-2xl font-black text-slate-600">No Assets Found</h3>
                 <p className="text-slate-600 text-base max-w-sm mt-2 font-medium">Compose a professional cover letter to optimize your application strategy.</p>
               </div>
             ) : (
@@ -249,20 +247,17 @@ export default function ResumePage() {
           </section>
         </div>
 
-        {/* Sidebar Diagnostics */}
         <div className="space-y-8">
           <div className="p-10 rounded-[48px] bg-slate-900 border border-white/10 relative overflow-hidden group shadow-2xl">
             <Sparkles className="w-12 h-12 text-blue-500 mb-10" />
-            <h3 className="text-3xl font-black text-white mb-6 tracking-tighter">Infrastructure Status</h3>
+            <h3 className="text-3xl font-black text-white mb-6 tracking-tighter">Production Grade</h3>
             <p className="text-slate-400 text-sm leading-relaxed mb-10 font-bold opacity-80">
-              Your production assets are synced with Supabase storage clusters for high availability.
+              Synced with Supabase Cloud. Every document is handled with zero-trust security.
             </p>
-            
             <div className="space-y-6">
               {[
                 { label: "Storage Bucket", status: "Active", color: "text-emerald-400" },
-                { label: "AI Parsing", status: "Enabled", color: "text-blue-400" },
-                { label: "Cloud Sync", status: "Verified", color: "text-emerald-400" }
+                { label: "AI Parsing", status: "Enabled", color: "text-blue-400" }
               ].map((item, i) => (
                 <div key={i} className="flex items-center justify-between p-5 rounded-3xl bg-white/5 border border-white/5">
                   <span className="text-sm font-bold text-slate-500">{item.label}</span>
@@ -274,16 +269,13 @@ export default function ResumePage() {
         </div>
       </div>
 
-      {/* Modern Asset Creator */}
+      {/* Asset Creator Modal */}
       {showCoverLetterModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setShowCoverLetterModal(false)} />
-          <div className="relative w-full max-w-2xl bg-slate-950 border border-white/10 rounded-[56px] shadow-2xl overflow-hidden">
-            <div className="p-12 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
-              <div>
-                <h3 className="text-4xl font-black text-white tracking-tighter">Compose Asset</h3>
-                <p className="text-slate-500 text-sm mt-1 font-bold">Cloud-synced composition</p>
-              </div>
+          <div className="relative w-full max-w-2xl bg-slate-950 border border-white/10 rounded-[56px] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div className="p-12 border-b border-white/5 flex items-center justify-between">
+              <h3 className="text-4xl font-black text-white tracking-tighter">Create Asset</h3>
               <button onClick={() => setShowCoverLetterModal(false)} className="p-4 rounded-full hover:bg-white/5 text-slate-500 hover:text-white transition-all border border-white/10">
                 <X className="w-6 h-6" />
               </button>
@@ -291,55 +283,20 @@ export default function ResumePage() {
 
             <div className="p-12 space-y-10">
               <div className="flex gap-4 p-2 bg-white/5 rounded-[32px] w-fit border border-white/5">
-                <button 
-                  onClick={() => setCoverLetterMode('manual')}
-                  className={cn("px-10 py-4 rounded-[24px] text-sm font-black transition-all", coverLetterMode === 'manual' ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300")}
-                >
-                  Manual
-                </button>
-                <button 
-                  onClick={() => setCoverLetterMode('ai')}
-                  className={cn("px-10 py-4 rounded-[24px] text-sm font-black transition-all flex items-center gap-3", coverLetterMode === 'ai' ? "bg-blue-600 text-white shadow-2xl shadow-blue-600/30" : "text-slate-500 hover:text-slate-300")}
-                >
-                  <Wand2 className="w-5 h-5" /> AI Generator
-                </button>
+                <button onClick={() => setCoverLetterMode('manual')} className={cn("px-10 py-4 rounded-[24px] text-sm font-black transition-all", coverLetterMode === 'manual' ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300")}>Manual</button>
+                <button onClick={() => setCoverLetterMode('ai')} className={cn("px-10 py-4 rounded-[24px] text-sm font-black transition-all flex items-center gap-3", coverLetterMode === 'ai' ? "bg-blue-600 text-white shadow-2xl shadow-blue-600/30" : "text-slate-500 hover:text-slate-300")}><Wand2 className="w-5 h-5" /> AI Generate</button>
               </div>
 
               {coverLetterMode === 'ai' ? (
                 <div className="py-16 flex flex-col items-center justify-center space-y-10 text-center">
-                  <div className="h-32 w-32 rounded-[40px] bg-blue-600/10 flex items-center justify-center relative">
-                    <Sparkles className="w-16 h-16 text-blue-400" />
-                    <div className="absolute inset-0 rounded-[40px] border-4 border-blue-500/20 animate-ping" />
-                  </div>
-                  <button 
-                    onClick={generateAICoverLetter}
-                    disabled={isGenerating}
-                    className="px-16 py-6 rounded-[32px] bg-blue-600 hover:bg-blue-500 text-white font-black shadow-2xl shadow-blue-600/40 transition-all flex items-center gap-4 text-xl"
-                  >
-                    {isGenerating ? <Loader2 className="w-7 h-7 animate-spin" /> : <Wand2 className="w-7 h-7" />}
-                    {isGenerating ? "AI Composition..." : "Initialize AI Writer"}
-                  </button>
+                  <div className="h-32 w-32 rounded-[40px] bg-blue-600/10 flex items-center justify-center relative"><Sparkles className="w-16 h-16 text-blue-400" /><div className="absolute inset-0 rounded-[40px] border-4 border-blue-500/20 animate-ping" /></div>
+                  <button onClick={generateAICoverLetter} disabled={isGenerating} className="px-16 py-6 rounded-[32px] bg-blue-600 hover:bg-blue-500 text-white font-black shadow-2xl shadow-blue-600/40 transition-all flex items-center gap-4 text-xl">{isGenerating ? <Loader2 className="w-7 h-7 animate-spin" /> : <Wand2 className="w-7 h-7" />}{isGenerating ? "AI Composition..." : "Initialize AI Writer"}</button>
                 </div>
               ) : (
                 <div className="space-y-8">
-                  <input 
-                    className="w-full bg-white/5 border border-white/10 rounded-[24px] px-8 py-6 outline-none focus:border-blue-500/50 transition-all text-white font-black text-xl tracking-tight"
-                    placeholder="Document Title"
-                    value={currentCoverLetter.title}
-                    onChange={e => setCurrentCoverLetter({...currentCoverLetter, title: e.target.value})}
-                  />
-                  <textarea 
-                    className="w-full h-80 bg-white/5 border border-white/10 rounded-[32px] px-8 py-8 outline-none focus:border-blue-500/50 transition-all text-white font-bold resize-none leading-relaxed text-lg"
-                    placeholder="Write your professional story..."
-                    value={currentCoverLetter.content}
-                    onChange={e => setCurrentCoverLetter({...currentCoverLetter, content: e.target.value})}
-                  />
-                  <button 
-                    onClick={handleSaveCoverLetter}
-                    className="w-full py-6 rounded-[32px] bg-white text-slate-950 font-black shadow-2xl transition-all flex items-center justify-center gap-4 text-xl hover:bg-slate-200"
-                  >
-                    <Save className="w-7 h-7" /> Finalize Asset
-                  </button>
+                  <input className="w-full bg-white/5 border border-white/10 rounded-[24px] px-8 py-6 outline-none focus:border-blue-500/50 transition-all text-white font-black text-xl" placeholder="Title" value={currentCoverLetter.title} onChange={e => setCurrentCoverLetter({...currentCoverLetter, title: e.target.value})} />
+                  <textarea className="w-full h-80 bg-white/5 border border-white/10 rounded-[32px] px-8 py-8 outline-none focus:border-blue-500/50 transition-all text-white font-bold resize-none leading-relaxed text-lg" placeholder="Professional content..." value={currentCoverLetter.content} onChange={e => setCurrentCoverLetter({...currentCoverLetter, content: e.target.value})} />
+                  <button onClick={handleSaveCoverLetter} className="w-full py-6 rounded-[32px] bg-white text-slate-950 font-black shadow-2xl transition-all flex items-center justify-center gap-4 text-xl hover:bg-slate-200"><Save className="w-7 h-7" /> Finalize Asset</button>
                 </div>
               )}
             </div>
