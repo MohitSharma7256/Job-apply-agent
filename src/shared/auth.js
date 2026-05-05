@@ -1,6 +1,5 @@
 import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
-import { NextResponse } from 'next/server';
 import { AuthenticationError, AuthorizationError } from './errors.js';
 import { env } from './env.js';
 
@@ -77,13 +76,13 @@ export function withAuth(handler) {
       return await handler(request, context);
     } catch (error) {
       console.error('Auth middleware error:', error);
-      return NextResponse.json(
-        {
-          success: false,
-          error: error.message || 'Authentication failed'
-        },
-        { status: error.statusCode || 401 }
-      );
+      return new Response(JSON.stringify({
+        success: false,
+        error: error.message || 'Authentication failed'
+      }), {
+        status: error.statusCode || 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
   };
 }
