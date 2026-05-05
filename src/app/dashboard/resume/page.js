@@ -143,10 +143,10 @@ export default function ResumePage() {
               <p className="font-bold text-white mb-2">How to fix this in Supabase:</p>
               <ol className="list-decimal list-inside space-y-1.5 opacity-80">
                 <li>Go to your Supabase Project Dashboard</li>
-                <li>Click on <b>"Storage"</b> in the left sidebar</li>
-                <li>Click <b>"New Bucket"</b></li>
+                <li>Click on <b>&quot;Storage&quot;</b> in the left sidebar</li>
+                <li>Click <b>&quot;New Bucket&quot;</b></li>
                 <li>Name it exactly: <code className="text-red-400 font-bold bg-red-500/10 px-1.5 py-0.5 rounded">resumes</code></li>
-                <li>Toggle <b>"Public bucket"</b> to ON, then click Save</li>
+                <li>Toggle <b>&quot;Public bucket&quot;</b> to ON, then click Save</li>
               </ol>
             </div>
           )}
