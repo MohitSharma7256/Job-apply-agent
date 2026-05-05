@@ -3,58 +3,58 @@ import { createServer } from 'http';
 import { parse } from 'url';
 import next from 'next';
 import { cronService } from './src/services/cronService.js';
-import { env } from './src/shared/env.js';
+import { redis } from './src/shared/redis.js';
 import { createSocketServer, setupEventListeners } from './src/shared/socket.js';
 
 dotenv.config();
-
-// Validate environment variables at startup
-console.log('🔍 Validating environment variables...');
 
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
+// STEP 1: PORT FIX - Use process.env.PORT directly as Render injects it
+const PORT = process.env.PORT || 5000;
+
 app.prepare().then(async () => {
   const httpServer = createServer((req, res) => {
     const parsedUrl = parse(req.url, true);
+    
+    // STEP 8: HEALTH CHECK ENDPOINT
+    if (parsedUrl.pathname === '/health') {
+      redis.ping()
+        .then(() => {
+          res.writeHead(200, { 'Content-Type': 'text/plain' });
+          res.end('✅ OK - Redis Connected');
+        })
+        .catch((err) => {
+          res.writeHead(500, { 'Content-Type': 'text/plain' });
+          res.end('❌ Redis Down: ' + err.message);
+        });
+      return;
+    }
+
     handle(req, res, parsedUrl);
   });
 
   // Create authenticated Socket.IO server
   const io = createSocketServer(httpServer);
-  
-  // Store Socket.IO instance globally for event emission
   global.socketIO = io;
 
-  // Initialize BullMQ queues
-  const { initializeQueues } = await import('./src/shared/queue.js');
-  const queueInitialized = await initializeQueues();
-  
-  if (!queueInitialized) {
-    console.error('❌ Failed to initialize queues - server will continue but async features may not work');
-  }
-
-  // Setup event listeners for real-time updates
+  // Initialize event listeners
   setupEventListeners();
 
-  // Start worker process in background
+  // Start worker pool (Step 7: Concurrency is managed inside workers/index.js)
   import('./workers/index.js').catch(error => {
-    console.error('❌ Failed to start workers:', error);
+    console.error('❌ Failed to start worker pool:', error);
   });
 
-  // Start cron jobs to keep account active
+  // Start automation crons
   cronService.startAll();
 
-  const PORT = env.PORT;
   httpServer.listen(PORT, () => {
-    console.log(`> Server listening on http://localhost:${PORT}`);
-    console.log('> Server ready for production');
-    console.log('> Socket.IO real-time server initialized');
-    console.log('> BullMQ queues initialized');
-    console.log('> Workers started in background');
-    console.log('> Event listeners setup completed');
-    console.log('> Cron jobs started - account will stay active!');
-    console.log('> Real-time job tracking enabled!');
+    console.log(`🚀 Production Server listening on PORT: ${PORT}`);
+    console.log(`✅ Health check: http://localhost:${PORT}/health`);
+    console.log('📡 Real-time Socket.IO initialized');
+    console.log('⚙️ Background workers and cron jobs started');
   });
 });
