@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { setAuthToken } from '@/lib/apiClient';
-import { Key, User, Mail, Lock } from 'lucide-react';
+import { Zap, Mail, Lock } from 'lucide-react';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -16,7 +16,6 @@ export default function LoginPage() {
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -24,79 +23,59 @@ export default function LoginPage() {
   useEffect(() => {
     const restoreSession = async () => {
       try {
-        console.log('Checking for OAuth callback...');
-        
-        // Check for OAuth callback in URL hash (implicit flow)
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
-        const error = hashParams.get('error');
-        const errorDescription = hashParams.get('error_description');
-        
-        if (error) {
-          console.error('OAuth Error from callback:', error, errorDescription);
-          setError(`OAuth login failed: ${errorDescription || error}`);
+        const authError = hashParams.get('error');
+
+        if (authError) {
+          setError(`Login failed: ${hashParams.get('error_description') || authError}`);
           return;
         }
-        
+
         if (accessToken) {
-          console.log('Found access token in hash, setting session...');
-          // OAuth callback from Google - implicit flow
           const { data, error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken || ''
           });
-          
+
           if (sessionError) {
-            console.error('Session setting error:', sessionError);
-            setError(`Failed to establish session: ${sessionError.message}`);
+            setError(`Session error: ${sessionError.message}`);
             return;
           }
-          
+
           if (data.session?.access_token) {
-            console.log('Session established successfully');
             setAuthToken(data.session.access_token);
             router.replace('/dashboard');
             return;
           }
         }
 
-        // Check for OAuth code in URL (PKCE flow)
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get('code');
-        
+
         if (code) {
-          console.log('Found authorization code, exchanging for session...');
-          // OAuth PKCE flow - let Supabase handle the exchange
           const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          
+
           if (exchangeError) {
-            console.error('Code exchange error:', exchangeError);
-            setError(`Failed to exchange authorization code: ${exchangeError.message}`);
+            setError(`Auth error: ${exchangeError.message}`);
             return;
           }
-          
+
           if (data.session?.access_token) {
-            console.log('Code exchange successful');
             setAuthToken(data.session.access_token);
             router.replace('/dashboard');
             return;
           }
         }
 
-        // Check for existing session
-        console.log('Checking for existing session...');
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.access_token) {
-          console.log('Existing session found');
           setAuthToken(session.access_token);
           router.replace('/dashboard');
-        } else {
-          console.log('No existing session found');
         }
       } catch (err) {
-        console.error('OAuth restore error:', err);
-        setError('Authentication setup failed');
+        setError('Authentication failed');
       }
     };
 
@@ -111,13 +90,7 @@ export default function LoginPage() {
 
     try {
       if (mode === 'register') {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { name }
-          }
-        });
+        const { data, error } = await supabase.auth.signUp({ email, password });
 
         if (error) {
           setError(error.message);
@@ -130,14 +103,11 @@ export default function LoginPage() {
           return;
         }
 
-        setMessage('Account created. Please check your email to confirm your address.');
+        setMessage('Account created. Check your email to confirm.');
         return;
       }
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
       if (error) {
         setError(error.message);
@@ -150,7 +120,7 @@ export default function LoginPage() {
         return;
       }
 
-      setError('Unable to sign in. Please try again.');
+      setError('Unable to sign in.');
     } catch (err) {
       setError(err.message || 'Unknown error');
     } finally {
@@ -158,156 +128,95 @@ export default function LoginPage() {
     }
   };
 
-  const handleSocialLogin = async (provider) => {
-    setError('');
-    setIsLoading(true);
-
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/login`,
-          skipBrowserRedirect: false
-        }
-      });
-
-      if (error) {
-        console.error('OAuth Error:', error);
-        setError(`OAuth login failed: ${error.message}`);
-        setIsLoading(false);
-        return;
-      }
-      
-      console.log('OAuth initiated successfully');
-      // OAuth redirect will happen automatically
-    } catch (err) {
-      console.error('OAuth Exception:', err);
-      setError('Failed to initiate OAuth login');
-      setIsLoading(false);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-xl rounded-[40px] border border-white/10 bg-white/5 p-10 shadow-2xl shadow-slate-950/30 backdrop-blur-xl">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="h-14 w-14 rounded-3xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/20">
-            <Key className="w-7 h-7" />
+    <div className="min-h-screen bg-[#0a0d12] flex items-center justify-center px-4">
+      {/* Background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 via-transparent to-transparent" />
+
+      <div className="relative w-full max-w-md">
+        {/* Logo */}
+        <div className="flex items-center justify-center gap-3 mb-8">
+          <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+            <Zap className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-black text-white">{mode === 'login' ? 'Welcome Back' : 'Create Account'}</h1>
-            <p className="text-slate-400 mt-1">Secure access to your Job Apply Agent workspace.</p>
+            <h1 className="text-xl font-bold text-white">Job Agent</h1>
+            <p className="text-xs text-slate-500">AI Career Pilot</p>
           </div>
         </div>
 
-        <div className="mb-6 flex gap-2">
-          <button
-            onClick={() => setMode('login')}
-            className={`flex-1 rounded-3xl px-5 py-3 font-bold text-sm ${mode === 'login' ? 'bg-blue-600 text-white' : 'bg-white/5 text-slate-300'}`}
-          >
-            Login
-          </button>
-          <button
-            onClick={() => setMode('register')}
-            className={`flex-1 rounded-3xl px-5 py-3 font-bold text-sm ${mode === 'register' ? 'bg-blue-600 text-white' : 'bg-white/5 text-slate-300'}`}
-          >
-            Register
-          </button>
-        </div>
+        {/* Card */}
+        <div className="bg-[#141414] border border-white/5 rounded-xl p-6">
+          <h2 className="text-lg font-semibold text-white mb-1">{mode === 'login' ? 'Welcome back' : 'Create account'}</h2>
+          <p className="text-sm text-slate-400 mb-6">{mode === 'login' ? 'Sign in to continue' : 'Get started with AI job search'}</p>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {mode === 'register' && (
-            <label className="block text-slate-300 text-sm">
-              <span className="font-semibold">Full name</span>
-              <div className="mt-2 relative rounded-3xl bg-white/5 border border-white/10 focus-within:border-blue-500/60">
-                <User className="absolute top-1/2 left-4 -translate-y-1/2 text-slate-500" />
+          {/* Mode Toggle */}
+          <div className="flex gap-1 p-1 rounded-lg bg-white/5 mb-6">
+            <button
+              onClick={() => setMode('login')}
+              className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${mode === 'login' ? 'bg-white/10 text-white' : 'text-slate-400'}`}
+            >
+              Login
+            </button>
+            <button
+              onClick={() => setMode('register')}
+              className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${mode === 'register' ? 'bg-white/10 text-white' : 'text-slate-400'}`}
+            >
+              Register
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="text-xs font-medium text-slate-400 mb-1.5 block">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full rounded-3xl bg-transparent px-12 py-4 text-white outline-none"
-                  placeholder="Your Name"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-white/5 border border-white/5 rounded-lg pl-10 pr-4 py-2.5 outline-none focus:border-blue-500/50 transition-all text-white text-sm"
+                  type="email"
+                  placeholder="you@email.com"
                   required
                 />
               </div>
-            </label>
-          )}
-
-          <label className="block text-slate-300 text-sm">
-            <span className="font-semibold">Email address</span>
-            <div className="mt-2 relative rounded-3xl bg-white/5 border border-white/10 focus-within:border-blue-500/60">
-              <Mail className="absolute top-1/2 left-4 -translate-y-1/2 text-slate-500" />
-              <input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-3xl bg-transparent px-12 py-4 text-white outline-none"
-                type="email"
-                placeholder="you@example.com"
-                required
-              />
             </div>
-          </label>
 
-          <label className="block text-slate-300 text-sm">
-            <span className="font-semibold">Password</span>
-            <div className="mt-2 relative rounded-3xl bg-white/5 border border-white/10 focus-within:border-blue-500/60">
-              <Lock className="absolute top-1/2 left-4 -translate-y-1/2 text-slate-500" />
-              <input
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-3xl bg-transparent px-12 py-4 text-white outline-none"
-                type="password"
-                placeholder="Strong password"
-                required
-              />
-            </div>
-          </label>
-
-          {error && <div className="rounded-3xl bg-red-500/10 border border-red-500/20 p-4 text-red-200">{error}</div>}
-          {message && <div className="rounded-3xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-emerald-200">{message}</div>}
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full rounded-3xl bg-blue-600 px-6 py-4 font-black text-white shadow-xl shadow-blue-600/30 hover:bg-blue-500 transition-all"
-          >
-            {isLoading ? 'Working...' : mode === 'login' ? 'Login' : 'Create account'}
-          </button>
-
-          <div className="mt-6 text-center">
-            <div className="relative py-4">
-              <div className="absolute inset-x-0 top-1/2 h-px bg-white/10" />
-              <span className="relative bg-slate-950 px-3 text-xs uppercase tracking-[0.28em] text-slate-500">Or continue with</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => handleSocialLogin('google')}
-              className="mt-4 inline-flex w-full items-center justify-center gap-3 rounded-3xl border border-white/10 bg-white/5 px-6 py-4 text-sm font-black text-slate-200 transition-all hover:border-blue-500/40 hover:bg-white/10"
-            >
-              Continue with Google
-            </button>
-            {error && error.includes('OAuth') && (
-              <div className="mt-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs">
-                <p className="text-amber-400 font-medium">Google login temporarily unavailable</p>
-                <p className="text-slate-400 mt-1">Use email/password above or check OAuth configuration</p>
+            <div>
+              <label className="text-xs font-medium text-slate-400 mb-1.5 block">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-white/5 border border-white/5 rounded-lg pl-10 pr-4 py-2.5 outline-none focus:border-blue-500/50 transition-all text-white text-sm"
+                  type="password"
+                  placeholder="••••••••"
+                  required
+                />
               </div>
-            )}
-          </div>
-        </form>
+            </div>
 
-        <div className="mt-8 text-sm text-slate-500">
-          <p>
-            {mode === 'login'
-              ? 'Need an account?'
-              : 'Already have an account?'}
+            {error && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">{error}</div>}
+            {message && <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm">{message}</div>}
+
             <button
-              type="button"
-              onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-              className="ml-2 font-bold text-white underline"
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 font-medium text-white transition-all disabled:opacity-50 text-sm"
             >
-              {mode === 'login' ? 'Register' : 'Login'}
+              {isLoading ? 'Loading...' : mode === 'login' ? 'Sign In' : 'Create Account'}
             </button>
-          </p>
+          </form>
         </div>
+
+        {/* Footer */}
+        <p className="text-center text-xs text-slate-500 mt-6">
+          {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+          <button onClick={() => setMode(mode === 'login' ? 'register' : 'login')} className="text-blue-400 font-medium hover:text-blue-300">
+            {mode === 'login' ? 'Sign up' : 'Sign in'}
+          </button>
+        </p>
       </div>
     </div>
   );

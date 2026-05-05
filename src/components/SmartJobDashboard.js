@@ -44,9 +44,9 @@ const SmartJobDashboard = () => {
 
   const fetchUserProfile = async () => {
     try {
-      const response = await fetch('/api/user/profile', {
+      const response = await fetch('/api/profile', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('job-apply-agent-token')}`
         }
       });
       
