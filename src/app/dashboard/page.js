@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { authFetch, getAuthToken } from "@/lib/apiClient";
 import {
-  Search, Loader2, Rocket, Brain, History, BarChart3, Sparkles, MapPin, Briefcase, ArrowRight, Play, Zap, CheckCircle2, Clock, AlertCircle
+  Search, Loader2, Rocket, Brain, History, BarChart3, Sparkles, MapPin, Briefcase
 } from "lucide-react";
 import { JobProgressTracker } from "@/components/JobProgressTracker";
 
@@ -30,10 +29,8 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [jobsRes, profileRes] = await Promise.all([
-          authFetch('/api/jobs/list'),
-          authFetch('/api/profile')
-        ]);
+        const jobsRes = await fetch('/api/jobs/list');
+        const profileRes = await fetch('/api/profile');
 
         const jobsData = await jobsRes.json();
         const profileData = await profileRes.json();
@@ -57,7 +54,7 @@ export default function Dashboard() {
     if (!searchParams.keywords) return;
     setIsSearching(true);
     try {
-      const response = await authFetch('/api/jobs/search', {
+      const response = await fetch('/api/jobs/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...searchParams, maxResults: 10 })
