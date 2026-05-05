@@ -3,15 +3,22 @@ import { dbService } from '@/services/dbService';
 
 export async function POST(request) {
   try {
+    if (!dbService.supabase) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Supabase keys are missing in environment variables. Check your Render settings.' 
+      }, { status: 200 });
+    }
+
     const formData = await request.formData();
     const file = formData.get('file');
     const userId = formData.get('userId') || '00000000-0000-0000-0000-000000000000';
 
     if (!file) {
-      return NextResponse.json({ success: false, error: 'No file provided' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'No file provided' }, { status: 200 });
     }
 
-    // Convert file to Buffer for storage
+    // Convert file to Buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
@@ -25,11 +32,12 @@ export async function POST(request) {
       });
 
     if (uploadError) {
-      // If bucket doesn't exist, we might need to inform the user
-      if (uploadError.message.includes('bucket not found')) {
-        console.warn('⚠️ Storage bucket "resumes" not found. Please create it in Supabase.');
+      console.error('Storage Error:', uploadError);
+      let errorMsg = uploadError.message;
+      if (errorMsg.includes('bucket not found')) {
+        errorMsg = 'Storage bucket "resumes" not found in Supabase. Please create it manually.';
       }
-      throw uploadError;
+      return NextResponse.json({ success: false, error: errorMsg }, { status: 200 });
     }
 
     // 2. Get Public URL
@@ -37,8 +45,6 @@ export async function POST(request) {
       .from('resumes')
       .getPublicUrl(fileName);
 
-    // 3. Save reference in Database (user_profiles or a new resumes table)
-    // For now, we'll return success and the URL
     return NextResponse.json({
       success: true,
       message: 'File uploaded successfully',
@@ -48,10 +54,10 @@ export async function POST(request) {
     });
 
   } catch (error) {
-    console.error('Upload API Error:', error);
+    console.error('Upload API Exception:', error);
     return NextResponse.json({
       success: false,
-      error: error.message || 'Upload failed'
-    }, { status: 500 });
+      error: 'Unexpected server error during upload'
+    }, { status: 200 });
   }
 }
