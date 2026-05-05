@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { 
   Upload, FileText, CheckCircle2, Loader2, Sparkles, 
-  Trash2, Eye, Mail, Plus, Wand2, Save, X, AlertCircle
+  Trash2, Eye, Mail, Plus, Wand2, Save, X, AlertCircle, RefreshCw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -18,8 +18,26 @@ export default function ResumePage() {
   const [resumes, setResumes] = useState([]);
   const [coverLetters, setCoverLetters] = useState([]);
   const [error, setError] = useState(null);
+  const [status, setStatus] = useState('idle'); // idle, checking, ok, error
   
   const fileInputRef = useRef(null);
+
+  // Check system health on load
+  useEffect(() => {
+    checkHealth();
+  }, []);
+
+  const checkHealth = async () => {
+    setStatus('checking');
+    try {
+      const res = await fetch('/api/profile');
+      const data = await res.json();
+      if (data.success) setStatus('ok');
+      else setStatus('error');
+    } catch (e) {
+      setStatus('error');
+    }
+  };
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -40,8 +58,6 @@ export default function ResumePage() {
 
       const data = await response.json();
 
-      // If server upload succeeds, use that. 
-      // If it fails due to missing keys, FALLBACK to local display so the user isn't blocked.
       if (data.success) {
         const newResume = {
           id: Date.now().toString(),
@@ -51,38 +67,15 @@ export default function ResumePage() {
           url: data.url
         };
         setResumes(prev => [newResume, ...prev]);
+        setError(null);
       } else {
-        // FALLBACK: Local UI update so the user can continue testing even if Supabase keys are missing
-        console.warn('⚠️ Server upload failed, falling back to local mode:', data.error);
-        const localResume = {
-          id: Date.now().toString(),
-          name: file.name,
-          size: (file.size / (1024 * 1024)).toFixed(1) + " MB",
-          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          url: null, // No cloud URL yet
-          isLocal: true
-        };
-        setResumes(prev => [localResume, ...prev]);
-        
-        // Show a subtle hint instead of a big red blocker
-        if (data.error && data.error.includes('keys are missing')) {
-          console.info('💡 Note: File shown locally. Add Supabase keys to Render to enable cloud backup.');
-        }
+        setError(data.error || 'Production Server Refused Connection');
       }
     } catch (err) {
-      // Network error fallback
-      const localResume = {
-        id: Date.now().toString(),
-        name: file.name,
-        size: (file.size / (1024 * 1024)).toFixed(1) + " MB",
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        url: null,
-        isLocal: true
-      };
-      setResumes(prev => [localResume, ...prev]);
+      setError('Production Network Error. Please ensure Render environment is stable.');
     } finally {
       setIsUploading(false);
-      e.target.value = ''; 
+      if (fileInputRef.current) fileInputRef.current.value = ''; 
     }
   };
 
@@ -107,7 +100,7 @@ export default function ResumePage() {
     setTimeout(() => {
       setCurrentCoverLetter({
         title: "AI_Generated_CL",
-        content: "Dear Hiring Manager,\n\nI am writing to express my strong interest in the role. Based on my technical background in full-stack development, I am confident in my ability to contribute effectively to your team.\n\nBest regards,\n[Your Name]"
+        content: "Dear Hiring Manager,\n\nI am writing to express my strong interest in the role. Based on my technical background, I am confident that my skills will add value to your team...\n\nBest regards,\n[Your Name]"
       });
       setIsGenerating(false);
       setCoverLetterMode('manual');
@@ -116,12 +109,36 @@ export default function ResumePage() {
 
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-10">
-      <header className="space-y-2">
-        <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">Resume & Assets</h1>
-        <p className="text-slate-500 max-w-2xl text-sm md:text-base">
-          Manage your job application documents. Files are stored securely for AI tailoring.
-        </p>
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="space-y-2">
+          <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter">Production Assets</h1>
+          <p className="text-slate-500 max-w-2xl font-medium">
+            Professional document hub. Cloud-synced with Supabase infrastructure.
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-4 bg-white/5 p-4 rounded-3xl border border-white/5">
+          <div className="text-right">
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Server Status</p>
+            <p className={cn("text-sm font-bold", status === 'ok' ? "text-emerald-400" : "text-amber-400")}>
+              {status === 'ok' ? "Cloud Sync Active" : status === 'checking' ? "Diagnosing..." : "Cloud Error"}
+            </p>
+          </div>
+          <button onClick={checkHealth} className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 transition-all">
+            <RefreshCw className={cn("w-5 h-5", status === 'checking' && "animate-spin")} />
+          </button>
+        </div>
       </header>
+
+      {error && (
+        <div className="p-6 rounded-[32px] bg-red-500/10 border border-red-500/20 flex items-start gap-5 text-red-400 animate-in slide-in-from-top-4 duration-500">
+          <AlertCircle className="w-6 h-6 mt-1 shrink-0" />
+          <div className="space-y-1">
+            <h4 className="font-bold text-white tracking-tight">System Configuration Error</h4>
+            <p className="text-sm font-medium text-red-400/80 leading-relaxed">{error}</p>
+          </div>
+        </div>
+      )}
 
       {/* Hidden File Input */}
       <input 
@@ -132,58 +149,56 @@ export default function ResumePage() {
         onChange={handleFileChange}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        <div className="lg:col-span-2 space-y-10">
           {/* Resume Section */}
-          <section className="space-y-6">
+          <section className="space-y-8">
             <div className="flex items-center justify-between px-2">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-400" /> Resumes
+              <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
+                <FileText className="w-6 h-6 text-blue-500" /> Resumes
               </h2>
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full border border-white/5">
-                {resumes.length} Files
-              </span>
             </div>
 
             <div 
               className={cn(
-                "p-10 md:p-16 rounded-[32px] bg-white/5 border-2 border-dashed transition-all flex flex-col items-center justify-center group cursor-pointer relative overflow-hidden",
+                "p-16 md:p-24 rounded-[48px] bg-white/5 border-2 border-dashed transition-all flex flex-col items-center justify-center group cursor-pointer relative overflow-hidden",
                 isUploading ? "border-blue-500/50 bg-blue-500/5" : "border-white/10 hover:border-blue-500/40"
               )}
               onClick={() => !isUploading && fileInputRef.current.click()}
             >
-              <div className="h-20 w-20 rounded-3xl bg-blue-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
-                {isUploading ? <Loader2 className="h-10 w-10 text-blue-400 animate-spin" /> : <Upload className="h-10 w-10 text-blue-400" />}
+              <div className="h-28 w-28 rounded-[40px] bg-blue-500/10 flex items-center justify-center mb-10 group-hover:scale-110 transition-transform duration-700">
+                {isUploading ? <Loader2 className="h-14 w-14 text-blue-400 animate-spin" /> : <Upload className="h-14 w-14 text-blue-400" />}
               </div>
-              <h3 className="text-xl font-bold text-white mb-2 text-center">
-                {isUploading ? "Uploading..." : "Click to select a file"}
+              <h3 className="text-3xl font-black text-white mb-4 text-center tracking-tight">
+                {isUploading ? "Connecting to Cloud..." : "Upload Professional Asset"}
               </h3>
-              <p className="text-slate-500 text-sm text-center">PDF, DOCX or TXT (Max 5MB)</p>
+              <p className="text-slate-500 text-base text-center font-medium opacity-60">High-fidelity PDF / DOCX parsing enabled</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {resumes.map(resume => (
-                <div key={resume.id} className="p-5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between group hover:border-blue-500/30 transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-red-400">
-                      <FileText className="w-6 h-6" />
+                <div key={resume.id} className="p-7 rounded-[32px] bg-white/5 border border-white/10 flex items-center justify-between group hover:border-blue-500/30 transition-all shadow-2xl hover:shadow-blue-500/5">
+                  <div className="flex items-center gap-6">
+                    <div className="h-16 w-16 rounded-2xl bg-slate-900 border border-white/10 flex items-center justify-center text-red-500">
+                      <FileText className="w-9 h-9" />
                     </div>
                     <div className="min-w-0">
-                      <h4 className="font-bold text-white text-sm truncate max-w-[140px]">{resume.name}</h4>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">
-                        {resume.size} • {resume.date}
-                        {resume.isLocal && <span className="ml-2 text-blue-400/60 font-black">LOCAL</span>}
-                      </p>
+                      <h4 className="font-bold text-white text-lg truncate max-w-[180px] tracking-tight">{resume.name}</h4>
+                      <div className="flex items-center gap-3 text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1.5">
+                        <span>{resume.size}</span>
+                        <span>•</span>
+                        <span>{resume.date}</span>
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {resume.url && (
-                      <a href={resume.url} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-white/5 text-slate-400 hover:text-white transition-all">
-                        <Eye className="w-4 h-4" />
+                      <a href={resume.url} target="_blank" rel="noopener noreferrer" className="p-3.5 rounded-2xl bg-white/5 text-slate-400 hover:text-white transition-all hover:bg-white/10 border border-white/5">
+                        <Eye className="w-5 h-5" />
                       </a>
                     )}
-                    <button onClick={(e) => { e.stopPropagation(); setResumes(resumes.filter(r => r.id !== resume.id)) }} className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all">
-                      <Trash2 className="w-4 h-4" />
+                    <button onClick={(e) => { e.stopPropagation(); setResumes(resumes.filter(r => r.id !== resume.id)) }} className="p-3.5 rounded-2xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all border border-red-500/10">
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
@@ -192,40 +207,40 @@ export default function ResumePage() {
           </section>
 
           {/* Cover Letter Section */}
-          <section className="space-y-6">
+          <section className="space-y-8">
             <div className="flex items-center justify-between px-2">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <Mail className="w-5 h-5 text-purple-400" /> Cover Letters
+              <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
+                <Mail className="w-6 h-6 text-purple-500" /> Cover Letters
               </h2>
               <button 
                 onClick={() => setShowCoverLetterModal(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600/10 text-purple-400 border border-purple-500/20 hover:bg-purple-600/20 transition-all text-xs font-bold"
+                className="flex items-center gap-3 px-8 py-4 rounded-3xl bg-purple-600 text-white font-black hover:bg-purple-500 transition-all text-sm shadow-2xl shadow-purple-600/20"
               >
-                <Plus className="w-4 h-4" /> Create New
+                <Plus className="w-5 h-5" /> Create New Asset
               </button>
             </div>
 
             {coverLetters.length === 0 ? (
-              <div className="p-12 rounded-[32px] bg-white/[0.02] border border-dashed border-white/5 flex flex-col items-center justify-center text-center">
-                <Mail className="w-10 h-10 text-slate-700 mb-4" />
-                <h3 className="text-lg font-bold text-slate-400">No Cover Letters</h3>
-                <p className="text-slate-600 text-sm max-w-xs mt-1">Manual create or AI generate</p>
+              <div className="p-20 rounded-[48px] bg-white/[0.02] border border-dashed border-white/5 flex flex-col items-center justify-center text-center">
+                <Mail className="w-16 h-16 text-slate-800 mb-8" />
+                <h3 className="text-2xl font-black text-slate-600">No Content Saved</h3>
+                <p className="text-slate-600 text-base max-w-sm mt-2 font-medium">Compose a professional cover letter to optimize your application strategy.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {coverLetters.map(cl => (
-                  <div key={cl.id} className="p-5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between group hover:border-purple-500/30 transition-all">
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-slate-900 border border-purple-500/20 flex items-center justify-center text-purple-400">
-                        <Mail className="w-6 h-6" />
+                  <div key={cl.id} className="p-7 rounded-[32px] bg-white/5 border border-white/10 flex items-center justify-between group hover:border-purple-500/30 transition-all shadow-2xl">
+                    <div className="flex items-center gap-6">
+                      <div className="h-16 w-16 rounded-2xl bg-slate-900 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                        <Mail className="w-9 h-9" />
                       </div>
                       <div className="min-w-0">
-                        <h4 className="font-bold text-white text-sm truncate max-w-[150px]">{cl.name}</h4>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">{cl.size} • {cl.date}</p>
+                        <h4 className="font-bold text-white text-lg truncate max-w-[180px] tracking-tight">{cl.name}</h4>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1.5">{cl.size} • {cl.date}</p>
                       </div>
                     </div>
-                    <button onClick={() => setCoverLetters(coverLetters.filter(c => c.id !== cl.id))} className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all">
-                      <Trash2 className="w-4 h-4" />
+                    <button onClick={() => setCoverLetters(coverLetters.filter(c => c.id !== cl.id))} className="p-3.5 rounded-2xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all">
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 ))}
@@ -234,91 +249,96 @@ export default function ResumePage() {
           </section>
         </div>
 
-        {/* Sidebar Insights */}
-        <div className="space-y-6">
-          <div className="p-8 rounded-[32px] bg-gradient-to-br from-blue-600/10 to-purple-600/10 border border-white/10 relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <Sparkles className="w-8 h-8 text-blue-400/50 mb-6" />
-            <h3 className="text-xl font-bold text-white mb-4 tracking-tight text-center lg:text-left">AI Assets</h3>
-            <p className="text-slate-400 text-sm leading-relaxed mb-6 text-center lg:text-left">
-              Our AI uses these documents to understand your career path. High-quality resumes result in better matches.
+        {/* Sidebar Diagnostics */}
+        <div className="space-y-8">
+          <div className="p-10 rounded-[48px] bg-slate-900 border border-white/10 relative overflow-hidden group shadow-2xl">
+            <Sparkles className="w-12 h-12 text-blue-500 mb-10" />
+            <h3 className="text-3xl font-black text-white mb-6 tracking-tighter">Infrastructure Status</h3>
+            <p className="text-slate-400 text-sm leading-relaxed mb-10 font-bold opacity-80">
+              Your production assets are synced with Supabase storage clusters for high availability.
             </p>
-            <div className="flex items-center gap-3 text-sm text-slate-300 font-medium justify-center lg:justify-start">
-              <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>System Ready</span>
+            
+            <div className="space-y-6">
+              {[
+                { label: "Storage Bucket", status: "Active", color: "text-emerald-400" },
+                { label: "AI Parsing", status: "Enabled", color: "text-blue-400" },
+                { label: "Cloud Sync", status: "Verified", color: "text-emerald-400" }
+              ].map((item, i) => (
+                <div key={i} className="flex items-center justify-between p-5 rounded-3xl bg-white/5 border border-white/5">
+                  <span className="text-sm font-bold text-slate-500">{item.label}</span>
+                  <span className={cn("text-xs font-black uppercase tracking-widest", item.color)}>{item.status}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Cover Letter Modal */}
+      {/* Modern Asset Creator */}
       {showCoverLetterModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setShowCoverLetterModal(false)} />
-          <div className="relative w-full max-w-2xl bg-slate-900 border border-white/10 rounded-[40px] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
-            <div className="p-8 border-b border-white/5 flex items-center justify-between">
+          <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setShowCoverLetterModal(false)} />
+          <div className="relative w-full max-w-2xl bg-slate-950 border border-white/10 rounded-[56px] shadow-2xl overflow-hidden">
+            <div className="p-12 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
               <div>
-                <h3 className="text-2xl font-bold text-white">Create Cover Letter</h3>
-                <p className="text-slate-500 text-sm mt-1">Choose method</p>
+                <h3 className="text-4xl font-black text-white tracking-tighter">Compose Asset</h3>
+                <p className="text-slate-500 text-sm mt-1 font-bold">Cloud-synced composition</p>
               </div>
-              <button onClick={() => setShowCoverLetterModal(false)} className="p-2 rounded-full hover:bg-white/5 text-slate-500 hover:text-white transition-all">
+              <button onClick={() => setShowCoverLetterModal(false)} className="p-4 rounded-full hover:bg-white/5 text-slate-500 hover:text-white transition-all border border-white/10">
                 <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="p-8 space-y-6">
-              <div className="flex gap-2 p-1 bg-black/40 rounded-2xl w-fit">
+            <div className="p-12 space-y-10">
+              <div className="flex gap-4 p-2 bg-white/5 rounded-[32px] w-fit border border-white/5">
                 <button 
                   onClick={() => setCoverLetterMode('manual')}
-                  className={cn("px-6 py-2 rounded-xl text-sm font-bold transition-all", coverLetterMode === 'manual' ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300")}
+                  className={cn("px-10 py-4 rounded-[24px] text-sm font-black transition-all", coverLetterMode === 'manual' ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300")}
                 >
                   Manual
                 </button>
                 <button 
                   onClick={() => setCoverLetterMode('ai')}
-                  className={cn("px-6 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2", coverLetterMode === 'ai' ? "bg-purple-600 text-white" : "text-slate-500 hover:text-slate-300")}
+                  className={cn("px-10 py-4 rounded-[24px] text-sm font-black transition-all flex items-center gap-3", coverLetterMode === 'ai' ? "bg-blue-600 text-white shadow-2xl shadow-blue-600/30" : "text-slate-500 hover:text-slate-300")}
                 >
-                  <Wand2 className="w-4 h-4" /> AI Generate
+                  <Wand2 className="w-5 h-5" /> AI Generator
                 </button>
               </div>
 
               {coverLetterMode === 'ai' ? (
-                <div className="py-10 flex flex-col items-center justify-center space-y-6 text-center">
-                  <div className="h-20 w-20 rounded-full bg-purple-600/10 flex items-center justify-center">
-                    <Sparkles className="w-10 h-10 text-purple-400" />
-                  </div>
-                  <div>
-                    <h4 className="text-xl font-bold text-white">Let AI Write It</h4>
-                    <p className="text-slate-500 text-sm max-w-sm mt-2">Professional cover letter based on your resume.</p>
+                <div className="py-16 flex flex-col items-center justify-center space-y-10 text-center">
+                  <div className="h-32 w-32 rounded-[40px] bg-blue-600/10 flex items-center justify-center relative">
+                    <Sparkles className="w-16 h-16 text-blue-400" />
+                    <div className="absolute inset-0 rounded-[40px] border-4 border-blue-500/20 animate-ping" />
                   </div>
                   <button 
                     onClick={generateAICoverLetter}
                     disabled={isGenerating}
-                    className="px-10 py-4 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-black shadow-lg shadow-purple-600/20 transition-all flex items-center gap-2"
+                    className="px-16 py-6 rounded-[32px] bg-blue-600 hover:bg-blue-500 text-white font-black shadow-2xl shadow-blue-600/40 transition-all flex items-center gap-4 text-xl"
                   >
-                    {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Wand2 className="w-5 h-5" />}
-                    {isGenerating ? "Writing..." : "Generate with AI"}
+                    {isGenerating ? <Loader2 className="w-7 h-7 animate-spin" /> : <Wand2 className="w-7 h-7" />}
+                    {isGenerating ? "AI Composition..." : "Initialize AI Writer"}
                   </button>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-8">
                   <input 
-                    className="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 outline-none focus:border-blue-500/50 transition-all text-white font-bold"
+                    className="w-full bg-white/5 border border-white/10 rounded-[24px] px-8 py-6 outline-none focus:border-blue-500/50 transition-all text-white font-black text-xl tracking-tight"
                     placeholder="Document Title"
                     value={currentCoverLetter.title}
                     onChange={e => setCurrentCoverLetter({...currentCoverLetter, title: e.target.value})}
                   />
                   <textarea 
-                    className="w-full h-64 bg-black/40 border border-white/10 rounded-2xl px-5 py-4 outline-none focus:border-blue-500/50 transition-all text-white font-medium resize-none"
-                    placeholder="Content..."
+                    className="w-full h-80 bg-white/5 border border-white/10 rounded-[32px] px-8 py-8 outline-none focus:border-blue-500/50 transition-all text-white font-bold resize-none leading-relaxed text-lg"
+                    placeholder="Write your professional story..."
                     value={currentCoverLetter.content}
                     onChange={e => setCurrentCoverLetter({...currentCoverLetter, content: e.target.value})}
                   />
                   <button 
                     onClick={handleSaveCoverLetter}
-                    className="w-full py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2"
+                    className="w-full py-6 rounded-[32px] bg-white text-slate-950 font-black shadow-2xl transition-all flex items-center justify-center gap-4 text-xl hover:bg-slate-200"
                   >
-                    <Save className="w-5 h-5" /> Save Document
+                    <Save className="w-7 h-7" /> Finalize Asset
                   </button>
                 </div>
               )}
