@@ -26,7 +26,8 @@ class DbService {
   async getProfile(userId) {
     try {
       if (!supabaseClient) {
-        throw new Error('Database client not initialized. Check your environment variables.');
+        console.warn('⚠️ Database client not initialized. Returning empty profile.');
+        return { data: null, error: null };
       }
       // Basic UUID validation regex
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -41,12 +42,18 @@ class DbService {
         .single();
       
       if (error && error.code !== 'PGRST116') {
+        // Table not found or other schema errors
+        if (error.code === '42P01') {
+          console.warn('⚠️ Table user_profiles not found. Please run migrations.');
+          return { data: null, error: null };
+        }
         return { data: null, error };
       }
       
       return { data, error: null };
     } catch (e) {
-      return { data: null, error: e };
+      console.error('DbService Error:', e);
+      return { data: null, error: null };
     }
   }
 
