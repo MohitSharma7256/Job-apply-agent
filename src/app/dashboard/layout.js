@@ -9,9 +9,9 @@ export default function DashboardLayout({ children }) {
       <Sidebar />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen lg:ml-0">
-        {/* Mobile Header - Hidden since sidebar has menu button */}
-        <header className="lg:hidden h-16 border-b border-white/10 bg-slate-950 flex items-center justify-center px-6 sticky top-0 z-30">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen md:ml-0">
+        {/* Mobile Header */}
+        <header className="md:hidden h-16 border-b border-white/10 bg-slate-950 flex items-center justify-center px-6 sticky top-0 z-30">
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
               <svg className="h-5 w-5 text-white fill-current" viewBox="0 0 24 24">
