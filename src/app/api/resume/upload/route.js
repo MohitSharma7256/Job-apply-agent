@@ -81,5 +81,4 @@ export const POST = withAuth(async (request) => {
       error: 'Unexpected server error during upload: ' + error.message
     }, { status: 200 });
   }
-}); }
 });
