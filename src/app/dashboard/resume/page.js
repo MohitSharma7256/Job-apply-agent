@@ -29,7 +29,7 @@ export default function ResumePage() {
   const checkHealth = async () => {
     setStatus('checking');
     try {
-      const res = await fetch('/api/profile');
+      const res = await authFetch('/api/profile');
       const data = await res.json();
       if (data.success) setStatus('ok');
       else setStatus('error');

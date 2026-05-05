@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { authFetch } from "@/lib/apiClient";
 import {
   Search, Loader2, Rocket, Brain, User, FileText, History, BarChart3, ArrowRight, Table, Sparkles, MapPin, Briefcase
 } from "lucide-react";
@@ -31,8 +32,8 @@ export default function Dashboard() {
     const fetchData = async () => {
       try {
         const [jobsRes, profileRes] = await Promise.all([
-          fetch('/api/jobs/list'),
-          fetch('/api/profile')
+          authFetch('/api/jobs/list'),
+          authFetch('/api/profile')
         ]);
         
         const jobsData = await jobsRes.json();
@@ -57,7 +58,7 @@ export default function Dashboard() {
     if (!searchParams.keywords) return;
     setIsSearching(true);
     try {
-      const response = await fetch('/api/jobs/search', {
+      const response = await authFetch('/api/jobs/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...searchParams, maxResults: 10 })

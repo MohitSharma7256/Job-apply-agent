@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { User, Mail, Phone, Briefcase, MapPin, Save, Loader2, Target, Plus, X, Zap } from "lucide-react";
+import { authFetch } from "@/lib/apiClient";
 
 export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
@@ -21,7 +22,7 @@ export default function ProfilePage() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await fetch('/api/profile');
+        const response = await authFetch('/api/profile');
         const data = await response.json();
         if (data.success && data.profile) {
           setProfile(prev => ({
@@ -39,12 +40,11 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/profile', {
+      const response = await authFetch('/api/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...profile,
-          id: '00000000-0000-0000-0000-000000000000' // Use current mock ID
+          ...profile
         })
       });
       if (response.ok) {
