@@ -17,8 +17,13 @@ const PORT = process.env.PORT || 5000;
 
 app.prepare().then(async () => {
   const httpServer = createServer((req, res) => {
-    const parsedUrl = parse(req.url, true);
+    const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     
+    // Convert URL object to the format Next.js expects
+    const legacyParsedUrl = {
+      pathname: parsedUrl.pathname,
+      query: Object.fromEntries(parsedUrl.searchParams),
+    };
     // STEP 8: HEALTH CHECK ENDPOINT
     if (parsedUrl.pathname === '/health') {
       redis.ping()
@@ -33,7 +38,7 @@ app.prepare().then(async () => {
       return;
     }
 
-    handle(req, res, parsedUrl);
+    handle(req, res, legacyParsedUrl);
   });
 
   // Create authenticated Socket.IO server

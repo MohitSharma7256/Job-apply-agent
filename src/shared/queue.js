@@ -11,14 +11,8 @@ const queueConfig = {
       type: 'exponential',
       delay: 2000,
     },
-    removeOnComplete: {
-      age: 3600, // keep for 1 hour
-      count: 100, // keep last 100
-    },
-    removeOnFail: {
-      age: 24 * 3600, // keep for 24 hours
-      count: 100,
-    },
+    removeOnComplete: 50, // Strict retention for Upstash/Free Redis
+    removeOnFail: 20, // Strict retention
   },
 };
 
