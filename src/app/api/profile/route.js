@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { dbService } from '@/services/dbService';
+import { withAuth } from '@/shared/auth';
 export const dynamic = 'force-dynamic';
 
-export async function GET(request) {
+export const GET = withAuth(async (request) => {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || '00000000-0000-0000-0000-000000000000';
+    const userId = request.user?.id;
 
     const { data: profile, error } = await dbService.getProfile(userId);
     if (error) console.error('Profile Load Warning:', error);
@@ -19,12 +19,12 @@ export async function GET(request) {
     console.error('Profile API Exception:', error);
     return NextResponse.json({ success: true, profile: {} });
   }
-}
+});
 
-export async function POST(request) {
+export const POST = withAuth(async (request) => {
   try {
     const profileData = await request.json();
-    const userId = profileData.id || '00000000-0000-0000-0000-000000000000';
+    const userId = request.user?.id;
     
     const { data, error } = await dbService.updateProfile(userId, profileData);
     if (error) throw error;
@@ -40,6 +40,6 @@ export async function POST(request) {
     return NextResponse.json({
       success: false,
       error: 'Failed to save profile'
-    }, { status: 200 }); // Still return 200 with error message to avoid crash
+    }, { status: 200 });
   }
-}
+});

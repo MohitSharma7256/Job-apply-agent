@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Link from "next/link";
 import { 
   Upload, FileText, CheckCircle2, Loader2, Sparkles, 
   Trash2, Eye, Mail, Plus, Wand2, Save, X, AlertCircle, RefreshCw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { authFetch } from "@/lib/apiClient";
 
 export default function ResumePage() {
   const [isUploading, setIsUploading] = useState(false);
@@ -48,9 +48,8 @@ export default function ResumePage() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('userId', '00000000-0000-0000-0000-000000000000');
 
-      const response = await fetch('/api/resume/upload', {
+      const response = await authFetch('/api/resume/upload', {
         method: 'POST',
         body: formData
       });

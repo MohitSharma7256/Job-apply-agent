@@ -1,22 +1,23 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/services/dbService';
+import { withAuth } from '@/shared/auth';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(request) {
+export const POST = withAuth(async (request) => {
   try {
     const supabase = getSupabaseAdmin();
     
     if (!supabase) {
       return NextResponse.json({ 
         success: false, 
-        error: 'Server configuration missing. Ensure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set on Render.' 
+        error: 'Server configuration missing. Ensure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set in your deployment. Manual bucket creation may also be required if storage is not configured.' 
       }, { status: 200 });
     }
 
     const formData = await request.formData();
     const file = formData.get('file');
-    const userId = formData.get('userId') || '00000000-0000-0000-0000-000000000000';
+    const userId = request.user?.id;
 
     if (!file) {
       return NextResponse.json({ success: false, error: 'No file provided' }, { status: 200 });
@@ -80,4 +81,5 @@ export async function POST(request) {
       error: 'Unexpected server error during upload: ' + error.message
     }, { status: 200 });
   }
-}
+}); }
+});

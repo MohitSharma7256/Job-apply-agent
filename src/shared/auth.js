@@ -1,26 +1,68 @@
 import jwt from 'jsonwebtoken';
+import { createClient } from '@supabase/supabase-js';
 import { AuthenticationError, AuthorizationError } from './errors.js';
 import { env } from './env.js';
 
-// JWT token verification
-export function verifyToken(token) {
-  try {
-    if (!token) {
-      throw new AuthenticationError('No token provided');
-    }
+const supabaseAdmin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false }
+});
 
-    // Remove "Bearer " prefix if present
-    const cleanToken = token.replace('Bearer ', '');
-    
-    return jwt.verify(cleanToken, env.JWT_SECRET);
-  } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      throw new AuthenticationError('Invalid token');
-    } else if (error.name === 'TokenExpiredError') {
-      throw new AuthenticationError('Token expired');
-    }
-    throw error;
+async function findOrCreateApplicationUser(supabaseUser) {
+  const authId = supabaseUser.id;
+  const email = supabaseUser.email;
+  const name = supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || '';
+
+  const { data, error } = await supabaseAdmin
+    .from('users')
+    .select('id,email,name')
+    .eq('auth_id', authId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    throw new Error('User lookup failed: ' + error.message);
   }
+
+  if (data) {
+    return { id: data.id, authId, email: data.email, name: data.name };
+  }
+
+  const { data: insertData, error: insertError } = await supabaseAdmin
+    .from('users')
+    .insert({ auth_id: authId, email, name })
+    .select('id,email,name')
+    .single();
+
+  if (insertError) {
+    throw new Error('User creation failed: ' + insertError.message);
+  }
+
+  return { id: insertData.id, authId, email: insertData.email, name: insertData.name };
+}
+
+export async function verifyToken(token) {
+  if (!token) {
+    throw new AuthenticationError('No token provided');
+  }
+
+  const cleanToken = token.replace('Bearer ', '').trim();
+
+  // First try custom JWT tokens if they exist in the system
+  try {
+    const decoded = jwt.verify(cleanToken, env.JWT_SECRET);
+    if (decoded && typeof decoded === 'object' && decoded !== null) {
+      return decoded;
+    }
+  } catch (_) {
+    // ignore invalid custom JWT, fallback to Supabase access token
+  }
+
+  const { data, error } = await supabaseAdmin.auth.getUser(cleanToken);
+
+  if (error || !data?.user || !data.user.id) {
+    throw new AuthenticationError('Invalid or expired auth token');
+  }
+
+  return await findOrCreateApplicationUser(data.user);
 }
 
 // Authentication middleware
@@ -29,7 +71,7 @@ export function withAuth(handler) {
     const authorization = request.headers.get('authorization');
     
     try {
-      const user = verifyToken(authorization);
+      const user = await verifyToken(authorization);
       request.user = user;
       return await handler(request, context);
     } catch (error) {
@@ -67,13 +109,11 @@ export function requireUserOwnership(handler) {
       throw new AuthenticationError('Authentication required');
     }
 
-    // Admin can access any user data
     if (user.role === 'admin') {
       return await handler(request, context);
     }
 
-    // Users can only access their own data
-    if (requestedUserId && requestedUserId !== user.id && requestedUserId !== user.email) {
+    if (requestedUserId && requestedUserId !== String(user.id) && requestedUserId !== user.email) {
       throw new AuthorizationError('Access denied to this resource');
     }
 
@@ -83,8 +123,6 @@ export function requireUserOwnership(handler) {
 
 // Session validation for cookie-based auth
 export function validateSession(sessionId) {
-  // TODO: Implement session validation with database
-  // This would check the sessions table in Supabase
   return { valid: true, userId: 'demo-user' };
 }
 
@@ -108,7 +146,6 @@ export function withSessionAuth(handler) {
   };
 }
 
-// Generate JWT token
 export function generateToken(payload) {
   return jwt.sign(payload, env.JWT_SECRET, {
     expiresIn: '24h',
@@ -117,7 +154,6 @@ export function generateToken(payload) {
   });
 }
 
-// Extract user from request (for internal use)
 export function getUserFromRequest(request) {
   return request.user || null;
 }
