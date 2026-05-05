@@ -6,10 +6,10 @@ import { dbService } from '../services/dbService.js';
 const queueConfig = {
   connection: redis,
   defaultJobOptions: {
-    attempts: 3,
+    attempts: 5, // Improved retry strategy
     backoff: {
       type: 'exponential',
-      delay: 1000,
+      delay: 2000,
     },
     removeOnComplete: {
       age: 3600, // keep for 1 hour

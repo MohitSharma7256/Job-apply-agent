@@ -43,11 +43,6 @@ app.prepare().then(async () => {
   // Initialize event listeners
   setupEventListeners();
 
-  // Start worker pool (Step 7: Concurrency is managed inside workers/index.js)
-  import('./workers/index.js').catch(error => {
-    console.error('❌ Failed to start worker pool:', error);
-  });
-
   // Start automation crons
   cronService.startAll();
 
@@ -55,6 +50,6 @@ app.prepare().then(async () => {
     console.log(`🚀 Production Server listening on PORT: ${PORT}`);
     console.log(`✅ Health check: http://localhost:${PORT}/health`);
     console.log('📡 Real-time Socket.IO initialized');
-    console.log('⚙️ Background workers and cron jobs started');
+    console.log('⚙️ Cron jobs started');
   });
 });

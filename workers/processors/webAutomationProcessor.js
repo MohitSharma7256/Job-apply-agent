@@ -1,7 +1,7 @@
 import { chromium } from 'playwright';
 import { emitJobEvent, EVENT_TYPES } from '../../src/shared/events.js';
 
-export async function processWebAutomation(jobData) {
+export async function processWebAutomation(jobData, job) {
   const { type, platform, jobDetails, profile, resume, coverLetter, userId } = jobData;
   
   try {
@@ -12,19 +12,19 @@ export async function processWebAutomation(jobData) {
 
     switch (type) {
       case 'job_application':
-        result = await processJobApplication(platform, jobDetails, profile, resume, coverLetter);
+        result = await processJobApplication(platform, jobDetails, profile, resume, coverLetter, job);
         break;
       
       case 'login':
-        result = await processLogin(platform, profile);
+        result = await processLogin(platform, profile, job);
         break;
       
       case 'profile_update':
-        result = await processProfileUpdate(platform, profile);
+        result = await processProfileUpdate(platform, profile, job);
         break;
       
       case 'scraping':
-        result = await processScraping(platform, jobDetails);
+        result = await processScraping(platform, jobDetails, job);
         break;
       
       default:
@@ -48,16 +48,22 @@ export async function processWebAutomation(jobData) {
   }
 }
 
-async function processJobApplication(platform, jobDetails, profile, resume, coverLetter) {
+async function processJobApplication(platform, jobDetails, profile, resume, coverLetter, job) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
   });
   const page = await context.newPage();
 
-  // Helper to emit progress
-  const reportProgress = (step, progress, message) => {
-    console.log(`[${platform.toUpperCase()}] ${message}`);
+  // Helper to emit progress both to Socket and BullMQ Job state
+  const reportProgress = async (step, progress, message) => {
+    console.log(`[${platform.toUpperCase()}] Progress ${progress}%: ${message}`);
+    
+    // Pro Mode: Update BullMQ Progress Tracker
+    if (job && typeof job.updateProgress === 'function') {
+      try { await job.updateProgress(progress); } catch (e) { /* ignore */ }
+    }
+
     emitJobEvent(EVENT_TYPES.JOB_PROGRESS, {
       type: 'job_application',
       step,

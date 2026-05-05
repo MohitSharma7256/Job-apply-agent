@@ -10,9 +10,14 @@ import { processWebAutomation } from './processors/webAutomationProcessor.js';
 // Optimized Worker Configuration for Render
 const WORKER_OPTIONS = {
   connection: redis,
-  concurrency: 2, // Step 7: Low concurrency for Render stability
+  concurrency: 1, // Step 5: Absolute minimum concurrency for Puppeteer stability
   removeOnComplete: { count: 100 },
   removeOnFail: { count: 100 },
+  limiter: {
+    max: 5,
+    duration: 1000 // Rate limiting: Max 5 jobs per second
+  },
+  timeout: 120000 // Timeout: Fail job if it takes longer than 2 minutes
 };
 
 // Queue names
@@ -26,21 +31,26 @@ const QUEUES = {
 
 const createWorker = (name, processor) => {
   const worker = new Worker(name, async (job) => {
+    // 📝 Testing Logs: Identify exact duration
+    console.log("JOB START:", job.id, Date.now());
     console.log(`🔄 [${name}] Processing job ${job.id}`);
     try {
       if (job.data.jobRecordId) {
         await JobTracker.updateJobStatus(job.data.jobRecordId, 'processing');
       }
       
-      const result = await processor(job.data);
+      // Pass the full job object to allow progress tracking (job.updateProgress)
+      const result = await processor(job.data, job);
       
       if (job.data.jobRecordId) {
         await JobTracker.updateJobStatus(job.data.jobRecordId, 'completed', result);
       }
       
       console.log(`✅ [${name}] Job ${job.id} completed`);
+      console.log("JOB END:", job.id, Date.now());
       return result;
     } catch (error) {
+      console.log("JOB FAIL:", job.id, error.message);
       console.error(`❌ [${name}] Job ${job.id} failed:`, error.message);
       if (job.data.jobRecordId) {
         await JobTracker.updateJobStatus(job.data.jobRecordId, 'failed', null, error.message);
@@ -51,6 +61,10 @@ const createWorker = (name, processor) => {
 
   worker.on('error', (err) => {
     console.error(`❌ [${name}] Worker Error:`, err.message);
+  });
+  
+  worker.on('failed', (job, err) => {
+    console.error(`🚨 [${name}] Job ${job?.id} failed critically:`, err.message);
   });
 
   return worker;
@@ -64,6 +78,15 @@ const workers = {
   [QUEUES.AI_PROCESSING]: createWorker(QUEUES.AI_PROCESSING, processAIRequest),
   [QUEUES.WEB_AUTOMATION]: createWorker(QUEUES.WEB_AUTOMATION, processWebAutomation),
 };
+
+// Step 8: Dedicated Worker Health Check System
+setInterval(async () => {
+  try {
+    await redis.ping();
+  } catch (error) {
+    console.error('🚨 Worker Health Check Failed! Redis connection lost:', error.message);
+  }
+}, 30000);
 
 // Graceful shutdown
 const shutdown = async (signal) => {
