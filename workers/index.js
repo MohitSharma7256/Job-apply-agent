@@ -79,14 +79,14 @@ const workers = {
   [QUEUES.WEB_AUTOMATION]: createWorker(QUEUES.WEB_AUTOMATION, processWebAutomation),
 };
 
-// Step 8: Dedicated Worker Health Check System
+// Step 8: Dedicated Worker Health Check System (Relaxed to 120s to reduce Redis load)
 setInterval(async () => {
   try {
     await redis.ping();
   } catch (error) {
     console.error('🚨 Worker Health Check Failed! Redis connection lost:', error.message);
   }
-}, 30000);
+}, 120000);
 
 // Graceful shutdown
 const shutdown = async (signal) => {

@@ -14,7 +14,7 @@ export const getRedisInstance = () => {
     maxRetriesPerRequest: null, // Critical for BullMQ
     enableReadyCheck: false,
     connectTimeout: 10000,
-    commandTimeout: 5000,
+    commandTimeout: 10000, // Increased to 10 sec to prevent Upstash timeout on heavy commands
     retryStrategy(times) {
       // Exponential backoff with a cap at 2 seconds
       const delay = Math.min(times * 200, 2000);

@@ -147,6 +147,12 @@ export async function addJob(queueName, jobData, options = {}) {
     throw new Error(`Queue ${queueName} not found`);
   }
 
+  // ❗ BACKPRESSURE HANDLING (MANDATORY FIX 7)
+  const waitingCount = await queue.getWaitingCount();
+  if (waitingCount > 100) {
+    throw new Error("System Busy, try later");
+  }
+
   // Create job record for tracking
   const jobRecordId = await JobTracker.createJobRecord(jobData);
 
